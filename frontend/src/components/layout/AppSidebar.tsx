@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { 
   Sidebar, 
@@ -11,15 +11,43 @@ import {
   SidebarMenuItem, 
   SidebarMenuButton 
 } from "@/components/ui/sidebar";
-import { MessageSquare, LayoutDashboard, Settings, Plus, GraduationCap } from "lucide-react";
+import { MessageSquare, LayoutDashboard, Settings, Plus, GraduationCap, LogOut } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
-const recentChats = [
-  { id: "1", title: "CSE211 Mid-term topics" },
-  { id: "2", title: "Open Minor selection" },
-  { id: "3", title: "How to apply for CA Exemption" },
-];
+interface ChatSession {
+  id: string;
+  title: string;
+  updated_at: string;
+}
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  currentSessionId?: string | null;
+  onSessionChange?: (id: string | null) => void;
+}
+
+export function AppSidebar({ currentSessionId, onSessionChange }: AppSidebarProps) {
+  const { user, token, logout } = useAuth();
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+
+  useEffect(() => {
+    if (token) {
+      const fetchSessions = async () => {
+        try {
+          const response = await fetch('/api/chat/sessions', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setSessions(data);
+          }
+        } catch (error) {
+          console.error("Failed to fetch sessions:", error);
+        }
+      };
+      fetchSessions();
+    }
+  }, [token, currentSessionId]); // Refetch when current session changes (might have new title)
+
   return (
     <Sidebar>
       <SidebarHeader className="p-4 border-b">
@@ -34,7 +62,11 @@ export function AppSidebar() {
           <SidebarGroupContent className="pt-4">
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton className="w-full justify-start gap-2 h-10" variant="default">
+                <SidebarMenuButton 
+                  className="w-full justify-start gap-2 h-10" 
+                  variant="default"
+                  onClick={() => onSessionChange && onSessionChange(null)}
+                >
                   <Plus className="h-4 w-4" />
                   New Chat
                 </SidebarMenuButton>
@@ -47,13 +79,17 @@ export function AppSidebar() {
           <SidebarGroupLabel>Recent</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {recentChats.map((chat) => (
+              {sessions.map((chat) => (
                 <SidebarMenuItem key={chat.id}>
-                  <SidebarMenuButton asChild>
-                    <a href="#" className="flex items-center gap-2">
+                  <SidebarMenuButton 
+                    asChild 
+                    isActive={currentSessionId === chat.id}
+                    onClick={() => onSessionChange && onSessionChange(chat.id)}
+                  >
+                    <button className="flex items-center gap-2 w-full text-left">
                       <MessageSquare className="h-4 w-4 shrink-0 text-muted-foreground" />
                       <span className="truncate">{chat.title}</span>
-                    </a>
+                    </button>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -63,6 +99,12 @@ export function AppSidebar() {
 
         <SidebarGroup className="mt-auto">
           <SidebarGroupContent>
+            {user && (
+              <div className="px-2 py-3 mb-2 flex flex-col border-b border-border">
+                <span className="text-sm font-medium truncate">{user.full_name || 'User'}</span>
+                <span className="text-xs text-muted-foreground truncate">{user.registration_number}</span>
+              </div>
+            )}
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
@@ -78,6 +120,12 @@ export function AppSidebar() {
                     <Settings className="h-4 w-4" />
                     <span>Settings</span>
                   </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={logout} className="text-red-500 hover:text-red-600 hover:bg-red-50">
+                  <LogOut className="h-4 w-4" />
+                  <span>Logout</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

@@ -1,0 +1,22 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: coursecompass_db
+    restart: always
+    environment:
+      POSTGRES_USER: tanishq
+      POSTGRES_PASSWORD: tanishq
+      POSTGRES_DB: coursecompass
+    ports:
+      - "5432:5432"
+    volumes:
+      - coursecompass_data:/var/lib/postgresql/data
+
+volumes:
+  coursecompass_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      # Replace 'yourusername' with your actual OS user
+      device: /home/tanishq/docker/volumes/coursecompass
