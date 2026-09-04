@@ -1,6 +1,6 @@
+
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, Numeric, String, func
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, ForeignKey, Integer, Numeric, String
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
@@ -82,39 +82,13 @@ class CoursePrerequisite(Base):
     prerequisite_course = relationship("Course", foreign_keys=[PrereqCode], back_populates="prerequisite_for")
 
 
-class BenefitChunk(Base):
-    __tablename__ = "benefit_chunks"
+class DocumentChunk(Base):
+    __tablename__ = "document_chunks"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    document_name = Column(String(255), default="Academic Benefits.pdf")
-    section_title = Column(String(255), nullable=False)
-    page_number = Column(Integer, nullable=False)
-    chunk_type = Column(String(50), nullable=False)  # "policy_condition", "table_row", "faq", etc.
-    content = Column(String, nullable=False)  # Text content of the chunk
-    chunk_metadata = Column("metadata", JSONB, nullable=True)
-    embedding = Column(Vector(384))
-
-
-class SchemaChunk(Base):
-    __tablename__ = "schema_chunks"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    document_name = Column(String(255), default="Schema.md")
-    section_title = Column(String(255), nullable=False)
-    chunk_type = Column(String(50), nullable=False)
-    content = Column(String, nullable=False)
-    chunk_metadata = Column("metadata", JSONB, nullable=True)
-    embedding = Column(Vector(384))
-
-
-class CourseDocumentChunk(Base):
-    __tablename__ = "course_doc_chunks"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    course_code = Column(String(20), ForeignKey("courses.CourseCode"), nullable=False)
-    doc_type = Column(String(20), nullable=False) # 'Syllabus' or 'IP'
-    page_number = Column(Integer, nullable=False)
-    chunk_index = Column(Integer, nullable=False)
+    source = Column(String(255), nullable=False)
+    course_code = Column(String(20), nullable=True)
+    doc_type = Column(String(20), nullable=False, default="Markdown")
     content = Column(String, nullable=False)
     embedding = Column(Vector(384))
-    course = relationship("Course")
+
