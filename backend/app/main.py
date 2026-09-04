@@ -10,16 +10,39 @@ from .retrieval import search_documents
 ## CORS Middleware add
 
 COURSE_CODE_RE = re.compile(r"(?i)\b([A-Z]{3}\d{3})\b")
-SYLLABUS_SIGNALS = ("syllabus", "outcome", "credit", "textbook", "evaluation", "unit", "course plan")
+SYLLABUS_SIGNALS = ("syllabus", "course outcomes", "unit", "textbook", "reference", "credit")
+IP_SIGNALS = (
+    "week",
+    "lecture",
+    "tutorial",
+    "practical",
+    "evaluation",
+    "scheme",
+    "exam",
+    "session plan",
+    "readings",
+    "spill over",
+    "mid term",
+    "end term",
+)
 
 
 def detect_course_intent(query: str):
     match = COURSE_CODE_RE.search(query)
     course_code = match.group(1).upper() if match else None
-    prefer_syllabus = bool(course_code) or any(
-        s in query.lower() for s in SYLLABUS_SIGNALS
-    )
-    return course_code, prefer_syllabus
+    lowered = query.lower()
+
+    has_syllabus_signal = any(s in lowered for s in SYLLABUS_SIGNALS)
+    has_ip_signal = any(s in lowered for s in IP_SIGNALS)
+
+    if has_syllabus_signal and not has_ip_signal:
+        prefer_doc_type = "Syllabus"
+    elif has_ip_signal and not has_syllabus_signal:
+        prefer_doc_type = "IP"
+    else:
+        prefer_doc_type = None
+
+    return course_code, prefer_doc_type
 
 
 def build_grounded_prompt(results, question: str) -> str:
@@ -81,7 +104,7 @@ def chat_endpoint(request: ChatRequest):
     if not last_user:
         return {"response": "No user message found.", "sources": []}
 
-    course_code, prefer_syllabus = detect_course_intent(last_user["content"])
+    course_code, prefer_doc_type = detect_course_intent(last_user["content"])
 
     db = SessionLocal()
     try:
@@ -90,7 +113,7 @@ def chat_endpoint(request: ChatRequest):
             last_user["content"],
             k=5,
             course_code=course_code,
-            prefer_syllabus=prefer_syllabus,
+            prefer_doc_type=prefer_doc_type,
         )
     finally:
         db.close()
@@ -122,7 +145,7 @@ def rag_endpoint(request: RagQuery):
     if not request.query.strip():
         return {"answer": "Please provide a query.", "sources": []}
 
-    course_code, prefer_syllabus = detect_course_intent(request.query)
+    course_code, prefer_doc_type = detect_course_intent(request.query)
 
     db = SessionLocal()
     try:
@@ -131,7 +154,7 @@ def rag_endpoint(request: RagQuery):
             request.query,
             k=request.k,
             course_code=course_code or request.course_code,
-            prefer_syllabus=prefer_syllabus,
+            prefer_doc_type=prefer_doc_type,
         )
     finally:
         db.close()

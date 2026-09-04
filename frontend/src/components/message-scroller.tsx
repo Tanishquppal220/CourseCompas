@@ -1,5 +1,8 @@
 import { Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import rehypeHighlight from "rehype-highlight";
+import rehypeRaw from "rehype-raw";
+import remarkGfm from "remark-gfm";
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
@@ -41,7 +44,12 @@ export function MessageScroller({
                   : "bg-muted"
               }`}
             >
-              <ReactMarkdown>{message.content}</ReactMarkdown>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeRaw, rehypeHighlight]}
+              >
+                {message.content}
+              </ReactMarkdown>
             </div>
           </div>
         ))}

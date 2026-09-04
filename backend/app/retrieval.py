@@ -54,6 +54,7 @@ def search_documents(
     course_code: Optional[str] = None,
     source_filter: Optional[str] = None,
     doc_types: Optional[List[str]] = None,
+    prefer_doc_type: Optional[str] = None,
     prefer_syllabus: bool = False,
 ) -> List[Dict[str, Any]]:
     query_vector = get_embedder().encode(query, normalize_embeddings=True).tolist()
@@ -63,23 +64,27 @@ def search_documents(
         source_results = [r for r in source_results if source_filter in r["source"]]
         return source_results
 
-    if not prefer_syllabus:
+    if prefer_syllabus:
+        prefer_doc_type = "Syllabus"
+
+    if prefer_doc_type is None:
         return _search(db, query_vector, k, course_code, doc_types)
 
-    syllabus_rows = _search(db, query_vector, k, course_code, ["Syllabus"])
-    seen = {r["id"] for r in syllabus_rows}
+    primary_cap = max(1, k - 2)
+    preferred = _search(db, query_vector, k, course_code, [prefer_doc_type])
+    primary = preferred[:primary_cap]
+    seen = {r["id"] for r in primary}
 
-    remaining_slots = k - len(syllabus_rows)
-    if remaining_slots > 0:
-        other_types = ["IP"] if doc_types is None else [
-            t for t in doc_types if t != "Syllabus"
-        ]
-        if other_types:
-            for r in _search(
-                db, query_vector, remaining_slots, course_code, other_types
-            ):
-                if r["id"] not in seen:
-                    syllabus_rows.append(r)
-                    seen.add(r["id"])
+    other_types = ["IP", "Syllabus", "Markdown"]
+    other_types = [t for t in other_types if t != prefer_doc_type]
+    if doc_types:
+        other_types = [t for t in other_types if t in doc_types]
 
-    return syllabus_rows[:k]
+    remaining_slots = k - len(primary)
+    if remaining_slots > 0 and other_types:
+        for r in _search(db, query_vector, remaining_slots, course_code, other_types):
+            if r["id"] not in seen:
+                primary.append(r)
+                seen.add(r["id"])
+
+    return primary[:k]
