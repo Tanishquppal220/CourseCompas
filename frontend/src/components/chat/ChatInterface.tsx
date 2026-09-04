@@ -5,7 +5,6 @@ import { Send, User, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useAuth } from "@/context/AuthContext";
 
 interface Message {
   id: string;
@@ -15,52 +14,18 @@ interface Message {
 
 interface ChatInterfaceProps {
   className?: string;
-  sessionId?: string | null;
-  onSessionChange?: (id: string) => void;
 }
 
-export function ChatInterface({ className, sessionId, onSessionChange }: ChatInterfaceProps) {
-  const { token } = useAuth();
-  const [messages, setMessages] = useState<Message[]>([]);
+export function ChatInterface({ className }: ChatInterfaceProps) {
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: "1",
+      text: "Hello! I am your academic assistant. Ask me about course content, exams, or your progress.",
+      sender: "bot",
+    }
+  ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    if (sessionId && token) {
-      // Fetch session messages
-      const fetchMessages = async () => {
-        try {
-          setIsLoading(true);
-          const response = await fetch(`/api/chat/sessions/${sessionId}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          if (response.ok) {
-            const data = await response.json();
-            setMessages(
-              data.messages.map((m: any, i: number) => ({
-                id: i.toString(),
-                text: m.content,
-                sender: m.role === "user" ? "user" : "bot",
-              }))
-            );
-          }
-        } catch (error) {
-          console.error("Failed to fetch messages:", error);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      fetchMessages();
-    } else {
-      setMessages([
-        {
-          id: "1",
-          text: "Hello! I am your academic assistant. Ask me about course content, exams, or your progress.",
-          sender: "bot",
-        },
-      ]);
-    }
-  }, [sessionId, token]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -76,14 +41,12 @@ export function ChatInterface({ className, sessionId, onSessionChange }: ChatInt
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           messages: newMessages.map(m => ({
             role: m.sender === 'user' ? 'user' : 'assistant',
             content: m.text
-          })),
-          session_id: sessionId
+          }))
         })
       });
       
@@ -92,10 +55,6 @@ export function ChatInterface({ className, sessionId, onSessionChange }: ChatInt
       }
       
       const data = await response.json();
-      
-      if (data.session_id && data.session_id !== sessionId && onSessionChange) {
-        onSessionChange(data.session_id);
-      }
       
       setMessages(prev => [
         ...prev,

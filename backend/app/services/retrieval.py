@@ -100,3 +100,47 @@ def search_course_docs(
         })
         
     return formatted_results
+
+
+def search_schema(
+    db: Session,
+    query: str,
+    limit: int = 5,
+    section_filter: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    """
+    Perform semantic vector similarity search against schema_chunks using cosine distance.
+    """
+    try:
+        from app.models import SchemaChunk
+    except ImportError:
+        from backend.app.models import SchemaChunk
+
+    embedder = get_embedder()
+    query_vector = embedder.encode(query, normalize_embeddings=True).tolist()
+    
+    distance_expr = SchemaChunk.embedding.cosine_distance(query_vector)
+    
+    q = db.query(
+        SchemaChunk,
+        (1 - distance_expr).label("similarity_score")
+    )
+    
+    if section_filter:
+        q = q.filter(SchemaChunk.section_title.ilike(f"%{section_filter}%"))
+        
+    results = q.order_by(distance_expr).limit(limit).all()
+    
+    formatted_results = []
+    for chunk, similarity in results:
+        formatted_results.append({
+            "id": chunk.id,
+            "document_name": chunk.document_name,
+            "section_title": chunk.section_title,
+            "chunk_type": chunk.chunk_type,
+            "content": chunk.content,
+            "metadata": chunk.chunk_metadata,
+            "similarity_score": round(float(similarity), 4)
+        })
+        
+    return formatted_results

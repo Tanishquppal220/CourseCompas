@@ -43,3 +43,27 @@ def search_course_info(course_code: str, query: str) -> str:
         return "\n\n---\n\n".join(formatted)
     except Exception as e:
         return f"Error during course info retrieval: {str(e)}"
+
+
+@tool
+def search_schema_info(query: str, section_filter: str = None) -> str:
+    """
+    Search the program schema/structure database for courses, terms, electives, and requirements.
+    Always use this tool when the user asks about the overall program structure, which term a course is in, or available electives.
+    """
+    from app.services.retrieval import search_schema
+    db = SessionLocal()
+    try:
+        results = search_schema(db=db, query=query, limit=4, section_filter=section_filter)
+        if not results:
+            return "No specific schema info found for this query."
+        
+        formatted = []
+        for r in results:
+            formatted.append(f"Section: {r['section_title']}\nDetails:\n{r['content']}")
+        
+        return "\n\n---\n\n".join(formatted)
+    except Exception as e:
+        return f"Error during schema retrieval: {str(e)}"
+    finally:
+        db.close()
