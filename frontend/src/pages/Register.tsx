@@ -1,98 +1,106 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "../components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "../components/ui/card";
+import { Input } from "../components/ui/input";
+import { FieldGroup, Field, FieldLabel } from "../components/ui/field";
 
 export const Register = () => {
-  const [fullName, setFullName] = useState('');
-  const [regNumber, setRegNumber] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const { register } = useAuth();
+  const [formData, setFormData] = useState({
+    registration_number: "",
+    password: "",
+    cgpa: "",
+    current_term: "",
+    program: "",
+  });
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setIsLoading(true);
-
     try {
-      await register(regNumber, password, fullName);
-      navigate('/onboarding');
-    } catch (err) {
-      setError('Registration failed. Please try again.');
-    } finally {
-      setIsLoading(false);
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...formData,
+          cgpa: formData.cgpa ? parseFloat(formData.cgpa) : undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Registration failed");
+      }
+      
+      navigate("/login");
+    } catch (err: any) {
+      setError(err.message);
     }
   };
 
   return (
-    <div className="flex h-screen items-center justify-center bg-gray-50 p-4">
+    <div className="flex h-[80vh] items-center justify-center">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center">Register</CardTitle>
-          <CardDescription className="text-center">
-            Create an account on CourseCompass
-          </CardDescription>
+          <CardTitle className="text-2xl">Create Profile</CardTitle>
         </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
-            {error && (
-              <div className="bg-red-50 text-red-500 p-3 rounded-md text-sm">
-                {error}
-              </div>
-            )}
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="fullName">
-                Full Name (Optional)
-              </label>
-              <Input
-                id="fullName"
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="John Doe"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="regNumber">
-                Registration Number
-              </label>
-              <Input
-                id="regNumber"
-                type="text"
-                value={regNumber}
-                onChange={(e) => setRegNumber(e.target.value)}
-                required
-                placeholder="e.g. 21BBS0001"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="password">
-                Password
-              </label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
+        <form onSubmit={handleRegister}>
+          <CardContent className="flex flex-col gap-4">
+            {error && <div className="text-red-500 text-sm">{error}</div>}
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="reg-num">Registration Number</FieldLabel>
+                <Input
+                  id="reg-num"
+                  value={formData.registration_number}
+                  onChange={(e) => setFormData({...formData, registration_number: e.target.value})}
+                  required
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="password">Password</FieldLabel>
+                <Input
+                  id="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({...formData, password: e.target.value})}
+                  required
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="program">Program</FieldLabel>
+                <Input
+                  id="program"
+                  placeholder="e.g. B.Tech CSE"
+                  value={formData.program}
+                  onChange={(e) => setFormData({...formData, program: e.target.value})}
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="term">Current Term</FieldLabel>
+                <Input
+                  id="term"
+                  placeholder="e.g. Semester 5"
+                  value={formData.current_term}
+                  onChange={(e) => setFormData({...formData, current_term: e.target.value})}
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="cgpa">CGPA</FieldLabel>
+                <Input
+                  id="cgpa"
+                  type="number"
+                  step="0.01"
+                  placeholder="e.g. 8.5"
+                  value={formData.cgpa}
+                  onChange={(e) => setFormData({...formData, cgpa: e.target.value})}
+                />
+              </Field>
+            </FieldGroup>
           </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Registering...' : 'Register'}
-            </Button>
-            <div className="text-sm text-center text-gray-500">
-              Already have an account?{' '}
-              <Link to="/login" className="text-blue-600 hover:underline">
-                Login
-              </Link>
-            </div>
+          <CardFooter>
+            <Button type="submit" className="w-full">Register</Button>
           </CardFooter>
         </form>
       </Card>

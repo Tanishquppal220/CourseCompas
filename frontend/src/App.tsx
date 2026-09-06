@@ -1,39 +1,23 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { Landing } from "./pages/Landing";
-import { ChatPage } from "./pages/ChatPage";
+import Layout from "#components/layout";
+import { ChatWindow } from "#components/chat-window";
+import { Routes, Route } from "react-router-dom";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
-import { Onboarding } from "./pages/Onboarding";
-import { ProtectedRoute } from "./components/ProtectedRoute";
-import { AuthProvider } from "./context/AuthContext";
+import { Profile } from "./pages/Profile";
 
 function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
+    <div className="App grid min-h-screen grid-rows-[auto_1fr]">
+      <Layout>
         <Routes>
-          <Route path="/" element={<Landing />} />
+          <Route path="/" element={<ChatWindow />} />
+          <Route path="/chat/:id" element={<ChatWindow />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route 
-            path="/onboarding" 
-            element={
-              <ProtectedRoute requireOnboarding={false}>
-                <Onboarding />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/chat" 
-            element={
-              <ProtectedRoute>
-                <ChatPage />
-              </ProtectedRoute>
-            } 
-          />
+          <Route path="/profile" element={<Profile />} />
         </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+      </Layout>
+    </div>
   );
 }
 

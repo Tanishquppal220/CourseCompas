@@ -1,50 +1,38 @@
-from fastapi import Depends, FastAPI, HTTPException, Query, status
-from fastapi.concurrency import asynccontextmanager
-from sqlalchemy.orm import Session
+from typing import Annotated
 
-from .auth import create_access_token, get_current_user, get_db, hash_password, verify_password
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
 from .database import SessionLocal
-from .models import ChatMessage as ChatMessageModel, ChatSession, User
-from .schemas import (
-    ChatRequest,
-    ChatResponse,
-    ChatSessionSummary,
-    LoginRequest,
-    LoginResponse,
-    ProfileUpdateRequest,
-    RegisterRequest,
-    UserProfile,
-)
-from .services.llm import generate_chat_response
-from .services.retrieval import search_benefits
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    yield
-    print("Shutting down RAG background workers...")
-    try:
-        from joblib import externals
+class ChatRequest(BaseModel):
+    messages: list
+    session_id: str | None = None
 
-        externals.loky.get_reusable_executor().shutdown(wait=False)
-    except Exception:
-        pass
 
 
 app = FastAPI(
     title="CourseCompass API",
     description="Academic Programme Personalization & Benefits RAG API",
     version="0.3.0",
-    lifespan=lifespan,
 )
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ─── Health Check ───────────────────────────────────────────────────────────
 
-@app.get("/")
+
+@app.get("/api/status")
 async def read_root():
     return {
-        "status": "online",
+        "status": "ok",
         "service": "CourseCompass Academic & Benefits Assistant",
         "version": "0.3.0",
     }
@@ -52,233 +40,168 @@ async def read_root():
 
 # ─── Auth Routes ────────────────────────────────────────────────────────────
 
-@app.post("/api/auth/register", response_model=LoginResponse)
-def register(request: RegisterRequest, db: Session = Depends(get_db)):
-    existing = db.query(User).filter(User.registration_number == request.registration_number).first()
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Registration number already exists",
-        )
+from datetime import timedelta
 
-    user = User(
-        registration_number=request.registration_number,
-        hashed_password=hash_password(request.password),
-        full_name=request.full_name,
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+from fastapi import Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
-    token = create_access_token(data={"sub": str(user.id)})
-    profile = UserProfile(
-        id=user.id,
+from .auth import (
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    Token,
+    UserCreate,
+    UserLogin,
+    UserResponse,
+    create_access_token,
+    get_current_user,
+    get_db,
+    get_password_hash,
+    verify_password,
+)
+from .models import User
+
+
+@app.post("/api/auth/register", response_model=UserResponse)
+def register(user: UserCreate, db: Annotated[Session, Depends(get_db)]):
+    db_user = db.query(User).filter(User.registration_number == user.registration_number).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Registration number already registered")
+    
+    hashed_password = get_password_hash(user.password)
+    new_user = User(
         registration_number=user.registration_number,
-        full_name=user.full_name,
+        hashed_password=hashed_password,
+        cgpa=user.cgpa,
         current_term=user.current_term,
-        current_cgpa=float(user.current_cgpa) if user.current_cgpa else None,
-        program_name=user.program_name,
-        admission_year=user.admission_year,
-        is_onboarded=bool(user.is_onboarded),
+        program=user.program
     )
-    return LoginResponse(access_token=token, user=profile, needs_onboarding=True)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
 
-
-@app.post("/api/auth/login", response_model=LoginResponse)
-def login(request: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.registration_number == request.registration_number).first()
-    if not user or not verify_password(request.password, user.hashed_password):
+@app.post("/api/auth/login", response_model=Token)
+def login(user_credentials: UserLogin, db: Annotated[Session, Depends(get_db)]):
+    user = db.query(User).filter(User.registration_number == user_credentials.registration_number).first()
+    if not user or not verify_password(user_credentials.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid registration number or password",
+            detail="Incorrect registration number or password",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-
-    token = create_access_token(data={"sub": str(user.id)})
-    profile = UserProfile(
-        id=user.id,
-        registration_number=user.registration_number,
-        full_name=user.full_name,
-        current_term=user.current_term,
-        current_cgpa=float(user.current_cgpa) if user.current_cgpa else None,
-        program_name=user.program_name,
-        admission_year=user.admission_year,
-        is_onboarded=bool(user.is_onboarded),
+    
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.registration_number}, expires_delta=access_token_expires
     )
-    return LoginResponse(
-        access_token=token,
-        user=profile,
-        needs_onboarding=not bool(user.is_onboarded),
-    )
+    return {"access_token": access_token, "token_type": "bearer"}
 
-
-@app.get("/api/auth/me", response_model=UserProfile)
-def get_me(current_user: User = Depends(get_current_user)):
-    return UserProfile(
-        id=current_user.id,
-        registration_number=current_user.registration_number,
-        full_name=current_user.full_name,
-        current_term=current_user.current_term,
-        current_cgpa=float(current_user.current_cgpa) if current_user.current_cgpa else None,
-        program_name=current_user.program_name,
-        admission_year=current_user.admission_year,
-        is_onboarded=bool(current_user.is_onboarded),
-    )
-
-
-@app.put("/api/auth/profile", response_model=UserProfile)
-def update_profile(
-    request: ProfileUpdateRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    if request.full_name is not None:
-        current_user.full_name = request.full_name
-    current_user.current_term = request.current_term
-    current_user.current_cgpa = request.current_cgpa
-    current_user.program_name = request.program_name
-    if request.admission_year is not None:
-        current_user.admission_year = request.admission_year
-    current_user.is_onboarded = 1
-
-    db.commit()
-    db.refresh(current_user)
-
-    return UserProfile(
-        id=current_user.id,
-        registration_number=current_user.registration_number,
-        full_name=current_user.full_name,
-        current_term=current_user.current_term,
-        current_cgpa=float(current_user.current_cgpa) if current_user.current_cgpa else None,
-        program_name=current_user.program_name,
-        admission_year=current_user.admission_year,
-        is_onboarded=bool(current_user.is_onboarded),
-    )
-
-
-# ─── Benefits Search ───────────────────────────────────────────────────────
-
-@app.get("/api/benefits/search")
-def search_benefits_api(
-    query: str = Query(..., description="User query about academic benefits"),
-    limit: int = Query(5, ge=1, le=20, description="Number of results to retrieve"),
-    section: str | None = Query(None, description="Optional section filter"),
-    db: Session = Depends(get_db),
-):
-    results = search_benefits(db=db, query=query, limit=limit, section_filter=section)
-    return {
-        "query": query,
-        "section_filter": section,
-        "total_results": len(results),
-        "results": results,
-    }
+@app.get("/api/auth/me", response_model=UserResponse)
+def read_users_me(current_user: Annotated[User, Depends(get_current_user)]):
+    return current_user
 
 
 # ─── Chat Routes ────────────────────────────────────────────────────────────
 
-@app.post("/api/chat", response_model=ChatResponse)
-def chat_endpoint(
-    request: ChatRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    # Get or create session
-    session = None
-    if request.session_id:
-        session = (
-            db.query(ChatSession)
-            .filter(ChatSession.id == request.session_id, ChatSession.user_id == current_user.id)
-            .first()
-        )
-        if not session:
-            raise HTTPException(status_code=404, detail="Chat session not found")
-    else:
-        # Create a new session, title from first user message
-        first_user_msg = next((m.content for m in request.messages if m.role == "user"), "New Chat")
-        title = first_user_msg[:100] if first_user_msg else "New Chat"
-        session = ChatSession(user_id=current_user.id, title=title)
-        db.add(session)
-        db.commit()
-        db.refresh(session)
 
-    # Save the latest user message
-    latest_user_msg = next(
-        (m for m in reversed(request.messages) if m.role == "user"), None
+import uuid
+from typing import Annotated
+
+from fastapi import Request
+
+from .models import ChatMessage, ChatSession
+
+
+def get_optional_user(request: Request, db: Session):
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return None
+    token = auth_header.split(" ")[1]
+    from jose import JWTError, jwt
+
+    from .auth import ALGORITHM, SECRET_KEY
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        reg_num = payload.get("sub")
+        if reg_num:
+            return db.query(User).filter(User.registration_number == reg_num).first()
+    except JWTError:
+        pass
+    return None
+
+
+@app.post("/api/chat")
+def chat_endpoint(request: ChatRequest, req: Request):
+    last_user = next(
+        (m for m in reversed(request.messages) if m.get("role") == "user"),
+        None,
     )
-    if latest_user_msg:
-        db.add(ChatMessageModel(session_id=session.id, role="user", content=latest_user_msg.content))
-        db.commit()
+    if not last_user:
+        return {"response": "No user message found.", "sources": []}
 
-    # Generate AI response
-    response_text = generate_chat_response(request.messages, current_user)
+    db = SessionLocal()
+    session_id = request.session_id
+    try:
+        user = get_optional_user(req, db)
+        
+        # Determine or create session
+        if user:
+            if not session_id:
+                session_id = str(uuid.uuid4())
+                # Generate a short title from the first message
+                title = last_user["content"][:30] + ("..." if len(last_user["content"]) > 30 else "")
+                new_session = ChatSession(id=session_id, user_id=user.id, title=title)
+                db.add(new_session)
+                db.commit()
+            
+            # Save the user's message
+            db.add(ChatMessage(session_id=session_id, role="user", content=last_user["content"]))
+            db.commit()
 
-    # Save the AI response
-    db.add(ChatMessageModel(session_id=session.id, role="assistant", content=response_text))
-    db.commit()
+        # Fetch history
+        chat_history = []
+        if session_id:
+            past_messages = db.query(ChatMessage).filter(
+                ChatMessage.session_id == session_id
+            ).order_by(ChatMessage.created_at.asc()).all()
+            
+            # Note: We exclude the very last user message we just inserted so we don't duplicate it.
+            # Actually, `run_agent` takes `query` and `chat_history` separately, so we should slice out the last one.
+            if past_messages:
+                for m in past_messages[:-1]:
+                    chat_history.append({"role": m.role, "content": m.content})
 
-    return ChatResponse(response=response_text, session_id=session.id)
+        # Execute the Agentic Loop
+        from .agent import run_agent
+        user_reg_no = user.registration_number if user else None
+        
+        response_text, sources = run_agent(last_user["content"], user_reg_no, chat_history)
+
+        if user and session_id:
+            # Save the assistant's message
+            db.add(ChatMessage(session_id=session_id, role="assistant", content=response_text))
+            db.commit()
+
+    finally:
+        db.close()
+
+    return {"response": response_text, "sources": sources, "session_id": session_id}
 
 
-@app.get("/api/chat/sessions", response_model=list[ChatSessionSummary])
-def list_chat_sessions(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    sessions = (
-        db.query(ChatSession)
-        .filter(ChatSession.user_id == current_user.id)
-        .order_by(ChatSession.updated_at.desc())
-        .all()
-    )
-    return [
-        ChatSessionSummary(
-            id=s.id,
-            title=s.title,
-            updated_at=s.updated_at.isoformat() if s.updated_at else "",
-        )
-        for s in sessions
-    ]
+@app.get("/api/chat/sessions")
+def list_chat_sessions(current_user: Annotated[User, Depends(get_current_user)], db: Annotated[Session, Depends(get_db)]):
+    sessions = db.query(ChatSession).filter(ChatSession.user_id == current_user.id).order_by(ChatSession.created_at.desc()).all()
+    return [{"id": s.id, "title": s.title, "created_at": s.created_at} for s in sessions]
 
 
 @app.get("/api/chat/sessions/{session_id}")
-def get_chat_session(
-    session_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    session = (
-        db.query(ChatSession)
-        .filter(ChatSession.id == session_id, ChatSession.user_id == current_user.id)
-        .first()
-    )
+def get_chat_session(session_id: str, current_user: Annotated[User, Depends(get_current_user)], db: Annotated[Session, Depends(get_db)]):
+    session = db.query(ChatSession).filter(ChatSession.id == session_id, ChatSession.user_id == current_user.id).first()
     if not session:
-        raise HTTPException(status_code=404, detail="Chat session not found")
-
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    messages = db.query(ChatMessage).filter(ChatMessage.session_id == session_id).order_by(ChatMessage.created_at.asc()).all()
     return {
         "id": session.id,
         "title": session.title,
-        "messages": [
-            {"role": m.role, "content": m.content, "created_at": m.created_at.isoformat()}
-            for m in session.messages
-        ],
+        "messages": [{"role": m.role, "content": m.content} for m in messages]
     }
-
-
-@app.delete("/api/chat/sessions/{session_id}")
-def delete_chat_session(
-    session_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    session = (
-        db.query(ChatSession)
-        .filter(ChatSession.id == session_id, ChatSession.user_id == current_user.id)
-        .first()
-    )
-    if not session:
-        raise HTTPException(status_code=404, detail="Chat session not found")
-
-    # Delete messages first, then session
-    db.query(ChatMessageModel).filter(ChatMessageModel.session_id == session_id).delete()
-    db.delete(session)
-    db.commit()
-    return {"detail": "Session deleted"}
