@@ -1,94 +1,206 @@
-
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Column, ForeignKey, Integer, Numeric, String
+from sqlalchemy import (
+    Column,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    UniqueConstraint,
+    Text,
+)
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
 
+# Embedding dimension for all vector chunk tables.
+# Matches the embedding model configured in app.embeddings.
+EMBEDDING_DIM = 384
 
-class Program(Base):
-    __tablename__ = "programs"
+class CourseType(Base):
+    __tablename__ = "course_types"
 
-    ProgramID = Column(Integer, primary_key=True, autoincrement=True)
-    ProgramCode = Column(String(50), nullable=False)
-    ProgramName = Column(String(255), nullable=False)
-    AdmissionYear = Column(Integer, nullable=False)
-    DurationYears = Column(Integer, nullable=False)
+    code = Column(String(8), primary_key=True)
+    description = Column(String(100))
 
-    terms = relationship("Term", back_populates="program")
+
+class CourseNature(Base):
+    __tablename__ = "course_natures"
+
+    code = Column(String(8), primary_key=True)
+    description = Column(String(150))
+
+
+class ElectiveArea(Base):
+    __tablename__ = "elective_areas"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(150), unique=True, nullable=False)
 
 
 class Course(Base):
     __tablename__ = "courses"
 
-    CourseCode = Column(String(20), primary_key=True)
-    CourseTitle = Column(String(255), nullable=False)
-    L = Column(Integer, default=0)
-    T = Column(Integer, default=0)
-    P = Column(Integer, default=0)
-    Credit = Column(Numeric(3, 1), default=0.0)
-    ContactHours = Column(Numeric(4, 1), default=0.0)
-    CourseType = Column(String(10), nullable=True)
-    CourseNature = Column(String(10), nullable=True)
+    id = Column(Integer, primary_key=True)
+    code = Column(String(20), unique=True, nullable=False, index=True)
+    title = Column(String(200), nullable=False)
 
-    curriculum_items = relationship("TermCurriculum", back_populates="course")
-    basket_items = relationship("ElectiveBasket", back_populates="course")
-    prerequisites = relationship("CoursePrerequisite", foreign_keys="CoursePrerequisite.CourseCode", back_populates="course")
-    prerequisite_for = relationship("CoursePrerequisite", foreign_keys="CoursePrerequisite.PrereqCode", back_populates="prerequisite_course")
-
+    lecture_hours = Column(Integer, nullable=False, default=0)
+    tutorial_hours = Column(Integer, nullable=False, default=0)
+    practical_hours = Column(Integer, nullable=False, default=0)
+    credits = Column(Numeric(4, 1), nullable=False)
+    contact_hours = Column(Numeric(4, 1), nullable=False)
 
 class Term(Base):
     __tablename__ = "terms"
 
-    TermID = Column(Integer, primary_key=True, autoincrement=True)
-    ProgramID = Column(Integer, ForeignKey("programs.ProgramID"), nullable=False)
-    TermNumber = Column(Integer, nullable=False)
-    TermPath = Column(String(100), nullable=False)
+    id = Column(Integer, primary_key=True)
+    number = Column(Integer, nullable=False)
+    variant = Column(String(30), nullable=True)
+    label = Column(String(100), nullable=False)
 
-    program = relationship("Program", back_populates="terms")
-    curriculum = relationship("TermCurriculum", back_populates="term")
+    slots = relationship("TermSlot", back_populates="term", order_by="TermSlot.s_no")
 
-
-class TermCurriculum(Base):
-    __tablename__ = "term_curriculum"
-
-    CurriculumID = Column(Integer, primary_key=True, autoincrement=True)
-    TermID = Column(Integer, ForeignKey("terms.TermID"), nullable=False)
-    CourseCode = Column(String(20), ForeignKey("courses.CourseCode"), nullable=True)
-    PlaceholderName = Column(String(100), nullable=True)
-
-    term = relationship("Term", back_populates="curriculum")
-    course = relationship("Course", back_populates="curriculum_items")
-
+    __table_args__ = (
+        UniqueConstraint("number", "variant", name="uq_term_number_variant"),
+    )
 
 class ElectiveBasket(Base):
     __tablename__ = "elective_baskets"
 
-    BasketID = Column(Integer, primary_key=True, autoincrement=True)
-    BasketName = Column(String(100), nullable=False)
-    CourseCode = Column(String(20), ForeignKey("courses.CourseCode"), nullable=False)
-    ElectiveArea = Column(String(100), nullable=True)
+    id = Column(Integer, primary_key=True)
+    name = Column(String(150), nullable=False)
+    term_id = Column(Integer, ForeignKey("terms.id"), nullable=True)
 
-    course = relationship("Course", back_populates="basket_items")
+    term = relationship("Term")
+    options = relationship(
+        "BasketOption", back_populates="basket", cascade="all, delete-orphan"
+    )
+
+class BasketOption(Base):
+    __tablename__ = "basket_options"
+
+    id = Column(Integer, primary_key=True)
+    basket_id = Column(Integer, ForeignKey("elective_baskets.id"), nullable=False)
+    course_id = Column(Integer, ForeignKey("courses.id"), nullable=False)
+    elective_area_id = Column(Integer, ForeignKey("elective_areas.id"), nullable=True)
+    s_no = Column(Integer, nullable=True)
+
+    basket = relationship("ElectiveBasket", back_populates="options")
+    course = relationship("Course")
+    elective_area = relationship("ElectiveArea")
+
+    __table_args__ = (
+        UniqueConstraint(
+            "basket_id", "course_id", "elective_area_id", name="uq_basket_course_area"
+        ),
+    )
+
+class TermSlot(Base):
+    __tablename__ = "term_slots"
+
+    id = Column(Integer, primary_key=True)
+    term_id = Column(Integer, ForeignKey("terms.id"), nullable=False)
+    s_no = Column(Integer, nullable=False)
+    display_name = Column(String(150), nullable=True)
+
+    course_id = Column(Integer, ForeignKey("courses.id"), nullable=True)
+    basket_id = Column(Integer, ForeignKey("elective_baskets.id"), nullable=True)
+
+    course_type_code = Column(
+        String(8), ForeignKey("course_types.code"), nullable=False
+    )
+    course_nature_code = Column(
+        String(8), ForeignKey("course_natures.code"), nullable=False
+    )
+
+    term = relationship("Term", back_populates="slots")
+    course = relationship("Course")
+    basket = relationship("ElectiveBasket")
+    course_type = relationship("CourseType")
+    course_nature = relationship("CourseNature")
+
+    __table_args__ = (UniqueConstraint("term_id", "s_no", name="uq_term_sno"),)
 
 
-class CoursePrerequisite(Base):
-    __tablename__ = "course_prerequisites"
 
-    CourseCode = Column(String(20), ForeignKey("courses.CourseCode"), primary_key=True)
-    PrereqCode = Column(String(20), ForeignKey("courses.CourseCode"), primary_key=True)
+# Embedded models for API responses
 
-    course = relationship("Course", foreign_keys=[CourseCode], back_populates="prerequisites")
-    prerequisite_course = relationship("Course", foreign_keys=[PrereqCode], back_populates="prerequisite_for")
-
-
-class DocumentChunk(Base):
-    __tablename__ = "document_chunks"
+class CourseDocumentChunk(Base):
+    __tablename__ = "course_doc_chunks"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    source = Column(String(255), nullable=False)
-    course_code = Column(String(20), nullable=True)
-    doc_type = Column(String(20), nullable=False, default="Markdown")
-    content = Column(String, nullable=False)
-    embedding = Column(Vector(384))
 
+    course_code = Column(
+        String(20),
+        ForeignKey("courses.code"),
+        nullable=False,
+        index=True,
+    )
+
+    document_name = Column(String(255), nullable=True)
+
+    doc_type = Column(
+        String(20),
+        nullable=False,
+    )  # Syllabus, IP
+
+    section_title = Column(String(255), nullable=True)
+
+    page_number = Column(Integer, nullable=False)
+
+    chunk_index = Column(Integer, nullable=False)
+
+    chunk_type = Column(
+        String(50),
+        nullable=False,
+    )
+    # unit
+    # lecture
+    # practical
+    # course_outcome
+    # table_row
+
+    content = Column(Text, nullable=False)
+
+    chunk_metadata = Column(
+        "metadata",
+        JSONB,
+        nullable=True,
+    )
+
+    embedding = Column(Vector(EMBEDDING_DIM), nullable=False)
+
+    course = relationship("Course")
+
+class BenefitChunk(Base):
+    __tablename__ = "benefit_chunks"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    document_name = Column(
+        String(255),
+        nullable=False,
+        default="Academic Benefits.pdf",
+    )
+
+    section_title = Column(String(255), nullable=True)
+
+    page_number = Column(Integer, nullable=False)
+
+    chunk_index = Column(Integer, nullable=False)
+
+    chunk_type = Column(
+        String(50),
+        nullable=False,
+    )
+
+    content = Column(Text, nullable=False)
+
+    chunk_metadata = Column(
+        "metadata",
+        JSONB,
+        nullable=True,
+    )
+
+    embedding = Column(Vector(EMBEDDING_DIM), nullable=False)
