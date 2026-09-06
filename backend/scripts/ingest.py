@@ -32,13 +32,14 @@ from pathlib import Path
 backend_dir = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(backend_dir))
 
-from app.database import SessionLocal, engine
-from app.embeddings import embed_texts
-from app.models import Base, BenefitChunk, CourseDocumentChunk
 from chunkers import chunk_benefits, chunk_ip, chunk_syllabus
 from parse_pdf import batch_parse
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
+
+from app.database import SessionLocal, engine
+from app.embeddings import embed_texts
+from app.models import Base, BenefitChunk, CourseDocumentChunk
 
 DATA_DIR = backend_dir / "data"
 SYLLABUS_DIR = DATA_DIR / "Syllabus"
@@ -164,7 +165,7 @@ def ingest_course_docs(db, tasks: list) -> int:
             except IntegrityError:
                 db.rollback()
                 log(f"  {code} {doc_type}: SKIPPED (FK violation / unknown course)")
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 db.rollback()
                 log(f"  {code} {doc_type}: ERROR {exc}")
     return total

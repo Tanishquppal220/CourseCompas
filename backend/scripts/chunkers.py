@@ -13,7 +13,6 @@ Three chunkers, one per source shape:
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional
 
 from cleaners import clean_chunk_text, is_boilerplate, normalize_whitespace
 
@@ -59,15 +58,15 @@ def _collect_text_items(text_items):
 # ---------------------------------------------------------------------------
 
 
-def chunk_syllabus(text_items) -> List[Chunk]:
-    chunks: List[Chunk] = []
-    current_unit: Optional[int] = None
-    unit_buf: List[tuple] = []          # (page, topic_title, content)
-    outcomes_buf: List[str] = []
-    practicals: List[tuple] = []        # (page, text)
-    ref_items: List[str] = []
+def chunk_syllabus(text_items) -> list[Chunk]:
+    chunks: list[Chunk] = []
+    current_unit: int | None = None
+    unit_buf: list[tuple] = []          # (page, topic_title, content)
+    outcomes_buf: list[str] = []
+    practicals: list[tuple] = []        # (page, text)
+    ref_items: list[str] = []
     in_refs = False
-    overview_parts: List[tuple] = []
+    overview_parts: list[tuple] = []
 
     for page, text in _collect_text_items(text_items):
         lowered = text.lower()
@@ -101,7 +100,7 @@ def chunk_syllabus(text_items) -> List[Chunk]:
             continue
 
         # Text books / references enter references mode.
-        if text.startswith("Text Books") or text.startswith("References") or "text books:" in text[:40].lower():
+        if text.startswith(("Text Books", "References")) or "text books:" in text[:40].lower():
             in_refs = True
             ref_items.append(text)
             continue
@@ -210,7 +209,7 @@ def _clean_refs(text: str) -> str:
     return "\n".join(ln.strip() for ln in text.splitlines() if ln.strip())
 
 
-def _flush_unit(chunks: List[Chunk], unit_num: Optional[int], unit_buf: List[tuple]):
+def _flush_unit(chunks: list[Chunk], unit_num: int | None, unit_buf: list[tuple]):
     if unit_num is None or not unit_buf:
         return
     unit_label = _roman(unit_num)
@@ -354,8 +353,8 @@ def _format_lecture(row: dict) -> str:
     return "\n".join(parts)
 
 
-def chunk_ip(text_items, tables) -> List[Chunk]:
-    chunks: List[Chunk] = []
+def chunk_ip(text_items, tables) -> list[Chunk]:
+    chunks: list[Chunk] = []
     handled_tables = set()
 
     # ---- Course overview table: the one with course code + weightage ----
@@ -434,8 +433,7 @@ def chunk_ip(text_items, tables) -> List[Chunk]:
             continue
         handled_tables.add(ti)
 
-        current: Optional[dict] = None
-        current_page = table.page
+        current: dict | None = None
         for row in table.rows:
             meaningful = [c for c in row if c.strip()]
             if not meaningful:
@@ -488,7 +486,7 @@ def chunk_ip(text_items, tables) -> List[Chunk]:
     return chunks
 
 
-def _append_lecture_chunk(chunks: List[Chunk], row: dict):
+def _append_lecture_chunk(chunks: list[Chunk], row: dict):
     if not row or row["lecture"] is None:
         return
     content = _format_lecture(row)
@@ -549,11 +547,11 @@ def _overview_from_table(table) -> str:
 SECTION_BLOCK_WORDS = {"category", "stipend", "sr. no", "types of projects", "achievement level"}
 
 
-def chunk_benefits(md_path: Path) -> List[Chunk]:
+def chunk_benefits(md_path: Path) -> list[Chunk]:
     content = md_path.read_text(encoding="utf-8")
     blocks = [b.strip() for b in content.split("\n\n") if b.strip()]
 
-    chunks: List[Chunk] = []
+    chunks: list[Chunk] = []
     current_section = "Academic Benefits"
     current_overview = ""
     table_index = 0

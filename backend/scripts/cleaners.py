@@ -48,9 +48,7 @@ def is_boilerplate(text: str) -> bool:
         return True
     if lower_matches_phrase(lowered, IP_BOILERPLATE_PHRASES, min_chars=24):
         return True
-    if _looks_like_page_furniture(text):
-        return True
-    return False
+    return bool(_looks_like_page_furniture(text))
 
 
 def lower_matches_phrase(lowered: str, phrases, min_chars: int = 0) -> bool:
@@ -62,16 +60,13 @@ def lower_matches_phrase(lowered: str, phrases, min_chars: int = 0) -> bool:
 
 def _looks_like_page_furniture(text: str) -> bool:
     stripped = normalize_whitespace(text)
-    lowered = stripped.lower()
     if any(p.search(text) for p in FOOTER_PATTERNS):
         return True
     if len(stripped) < 4:
         return True
     if stripped.isdigit():
         return True
-    if re.fullmatch(r"\d+", stripped):
-        return True
-    return False
+    return bool(re.fullmatch(r"\d+", stripped))
 
 
 def clean_chunk_text(text: str) -> str:

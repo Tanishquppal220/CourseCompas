@@ -28,6 +28,7 @@ dependencies = [
     "pymupdf>=1.28.2",
     "pymupdf-layout>=1.28.2",
     "pymupdf4llm>=1.28.2",
+    "ruff>=0.16.6",
 ]
 
 [dependency-groups]

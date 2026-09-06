@@ -23,10 +23,10 @@ import logging
 import os
 import pickle
 import time
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
-from typing import Iterable, Optional
 
 logging.disable(logging.WARNING)
 
@@ -115,7 +115,7 @@ def _cache_file(pdf_path: Path) -> Path:
     return CACHE_DIR / f"{pdf_path.stem}_{digest}.pkl"
 
 
-def load_cached(pdf_path: Path) -> Optional[ParsedPdf]:
+def load_cached(pdf_path: Path) -> ParsedPdf | None:
     """Return cached parsed PDF if available."""
 
     pdf_path = pdf_path.resolve()
@@ -128,7 +128,7 @@ def load_cached(pdf_path: Path) -> Optional[ParsedPdf]:
         with open(cache_file, "rb") as fh:
             return pickle.load(fh)
 
-    except Exception:
+    except Exception:  # noqa: BLE001
         # Corrupt/incompatible cache → ignore it and re-parse.
         return None
 
@@ -220,7 +220,7 @@ def _parse_with_pymupdf(pdf_path: Path) -> ParsedPdf:
                         )
                     )
 
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 print(
                     f"[parse] table extraction warning "
                     f"{pdf_path.name} page {page_number}: {exc}",
@@ -249,7 +249,7 @@ def _parse_with_pymupdf(pdf_path: Path) -> ParsedPdf:
                         "top": i,  # preserve relative order
                         "text": clean_block,
                     })
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             print(
                 f"[parse] text extraction warning "
                 f"{pdf_path.name}: {exc}",
@@ -551,7 +551,7 @@ def batch_parse(
                         flush=True,
                     )
 
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 print(
                     f"[parse:pymupdf] FAILED {pdf_path.name}: {exc}",
                     flush=True,

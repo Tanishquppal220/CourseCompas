@@ -1,14 +1,16 @@
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     Column,
+    DateTime,
     ForeignKey,
     Integer,
     Numeric,
     String,
-    UniqueConstraint,
     Text,
+    UniqueConstraint,
+    func,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
@@ -16,6 +18,33 @@ Base = declarative_base()
 # Embedding dimension for all vector chunk tables.
 # Matches the embedding model configured in app.embeddings.
 EMBEDDING_DIM = 384
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    registration_number = Column(String(50), unique=True, index=True, nullable=False)
+    hashed_password = Column(String(255), nullable=False)
+    
+    # Academic Profile Information
+    cgpa = Column(Numeric(4, 2), nullable=True)
+    current_term = Column(String(50), nullable=True)
+    program = Column(String(150), nullable=True)
+
+class ChatSession(Base):
+    __tablename__ = "chat_sessions"
+    id = Column(String(36), primary_key=True) # UUID string
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    title = Column(String(255), nullable=False)
+    created_at = Column(DateTime, default=func.now())
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(String(36), ForeignKey("chat_sessions.id"), nullable=False)
+    role = Column(String(50), nullable=False) # 'user' or 'assistant'
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=func.now())
 
 class CourseType(Base):
     __tablename__ = "course_types"
@@ -170,6 +199,10 @@ class CourseDocumentChunk(Base):
     )
 
     embedding = Column(Vector(EMBEDDING_DIM), nullable=False)
+    
+    # Full Text Search column
+    # Full Text Search column
+    fts = Column(TSVECTOR, index=True)
 
     course = relationship("Course")
 
@@ -204,3 +237,6 @@ class BenefitChunk(Base):
     )
 
     embedding = Column(Vector(EMBEDDING_DIM), nullable=False)
+    
+    # Full Text Search column
+    fts = Column(TSVECTOR, index=True)

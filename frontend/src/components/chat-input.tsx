@@ -28,8 +28,8 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
           value={input}
           disabled={disabled}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Message..."
-          className="min-h-[52px] resize-none"
+          placeholder="Ask about courses, policies, grades..."
+          className="min-h-[52px] resize-none rounded-xl"
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
