@@ -1,4 +1,5 @@
 """Text cleaning and boilerplate removal for CourseCompass document chunks."""
+
 import re
 
 # Repeated disclaimer that appears at the bottom of every IP page.
@@ -72,13 +73,13 @@ def _looks_like_page_furniture(text: str) -> bool:
 def clean_chunk_text(text: str) -> str:
     """Normalize + strip footers for a chunk's content."""
     text = strip_footer(text)
-    
+
     # Remove the large instruction plan boilerplate to prevent entire blocks from being dropped
     text = re.sub(
         r"An instruction plan is only a tentative plan.*?mentioned in the instruction plan\.?",
         "",
         text,
-        flags=re.IGNORECASE | re.DOTALL
+        flags=re.IGNORECASE | re.DOTALL,
     )
-    
+
     return collapse_whitespace(text).strip()

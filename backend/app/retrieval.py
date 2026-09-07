@@ -31,17 +31,19 @@ def _course_search(
     chunk_types: list[str] | None,
 ) -> list[dict[str, Any]]:
     # 1. Prepare keyword search using websearch_to_tsquery for natural language
-    tsquery = func.websearch_to_tsquery('english', query_text)
-    
+    tsquery = func.websearch_to_tsquery("english", query_text)
+
     # 2. Vector distance
     distance = CourseDocumentChunk.embedding.cosine_distance(query_vector)
-    
+
     # 3. Hybrid scoring: scale both to a similar range (e.g. 0-1) and weight them
     # ts_rank scales naturally, but can exceed 1. We'll use a normalized rank.
     # cosine distance is 0 to 2 (1 - distance is -1 to 1). We'll map (1 - distance) and add normalized keyword score.
     # A simple formula: score = (1.0 - distance) + (func.ts_rank_cd(fts, tsquery) * 0.5)
-    
-    hybrid_score = (1.0 - distance) + func.coalesce(func.ts_rank_cd(CourseDocumentChunk.fts, tsquery), 0.0) * 0.5
+
+    hybrid_score = (1.0 - distance) + func.coalesce(
+        func.ts_rank_cd(CourseDocumentChunk.fts, tsquery), 0.0
+    ) * 0.5
 
     q = db.query(
         CourseDocumentChunk,
@@ -83,11 +85,13 @@ def _benefit_search(
     query_vector: list,
     k: int,
 ) -> list[dict[str, Any]]:
-    tsquery = func.websearch_to_tsquery('english', query_text)
+    tsquery = func.websearch_to_tsquery("english", query_text)
     distance = BenefitChunk.embedding.cosine_distance(query_vector)
-    
-    hybrid_score = (1.0 - distance) + func.coalesce(func.ts_rank_cd(BenefitChunk.fts, tsquery), 0.0) * 0.5
-    
+
+    hybrid_score = (1.0 - distance) + func.coalesce(
+        func.ts_rank_cd(BenefitChunk.fts, tsquery), 0.0
+    ) * 0.5
+
     q = db.query(
         BenefitChunk,
         hybrid_score.label("score"),
@@ -140,13 +144,23 @@ def search_documents(
         prefer_doc_type = "Syllabus"
 
     if prefer_doc_type is None:
-        candidates = _course_search(db, query, query_vector, candidate_k, course_code, doc_types, chunk_types)
+        candidates = _course_search(
+            db, query, query_vector, candidate_k, course_code, doc_types, chunk_types
+        )
         if rerank and len(candidates) > 1:
             return rerank_documents(query, candidates, top_k=k)
         return candidates[:k]
 
     primary_cap = max(1, candidate_k - 4)
-    preferred = _course_search(db, query, query_vector, candidate_k, course_code, [prefer_doc_type], chunk_types)
+    preferred = _course_search(
+        db,
+        query,
+        query_vector,
+        candidate_k,
+        course_code,
+        [prefer_doc_type],
+        chunk_types,
+    )
     primary = preferred[:primary_cap]
     seen = {r["id"] for r in primary}
 
@@ -158,7 +172,13 @@ def search_documents(
     remaining_slots = candidate_k - len(primary)
     if remaining_slots > 0 and other_types:
         for r in _course_search(
-            db, query, query_vector, remaining_slots, course_code, other_types, chunk_types
+            db,
+            query,
+            query_vector,
+            remaining_slots,
+            course_code,
+            other_types,
+            chunk_types,
         ):
             if r["id"] not in seen:
                 primary.append(r)

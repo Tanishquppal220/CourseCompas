@@ -23,6 +23,7 @@ Usage:
   uv run python scripts/ingest.py --benefits-only
   uv run python scripts/ingest.py --force-rebuild # recompute all + ignore cache
 """
+
 import argparse
 import sys
 import time
@@ -117,7 +118,9 @@ def ingest_course_docs(db, tasks: list) -> int:
 
     paths = sorted({t[3] for t in tasks})
     log(f"  parsing {len(paths)} uncached PDFs (Docling)")
-    parsed_map = {p: parsed for p, parsed in batch_parse(paths, use_cache=True, verbose=True)}
+    parsed_map = {
+        p: parsed for p, parsed in batch_parse(paths, use_cache=True, verbose=True)
+    }
 
     by_code = {}
     for code, doc_type, doc_name, pdf in tasks:
@@ -161,7 +164,9 @@ def ingest_course_docs(db, tasks: list) -> int:
                 db.bulk_insert_mappings(CourseDocumentChunk, rows)
                 db.commit()
                 total += len(rows)
-                log(f"  {code} {doc_type}: {len(rows)} chunks in {time.time()-t0:.0f}s")
+                log(
+                    f"  {code} {doc_type}: {len(rows)} chunks in {time.time() - t0:.0f}s"
+                )
             except IntegrityError:
                 db.rollback()
                 log(f"  {code} {doc_type}: SKIPPED (FK violation / unknown course)")
@@ -220,7 +225,7 @@ def ingest_benefits(db, force_rebuild: bool) -> int:
     db.query(BenefitChunk).delete()
     db.bulk_insert_mappings(BenefitChunk, rows)
     db.commit()
-    log(f"  benefits: {len(rows)} chunks in {time.time()-t0:.0f}s")
+    log(f"  benefits: {len(rows)} chunks in {time.time() - t0:.0f}s")
     return len(rows)
 
 
@@ -279,7 +284,7 @@ def main():
         with engine.connect() as conn:
             n = conn.execute(text(f"SELECT COUNT(*) FROM {table}")).scalar()
             log(f"{table}: total rows = {n}")
-    log(f"total time: {time.time()-started:.0f}s")
+    log(f"total time: {time.time() - started:.0f}s")
 
 
 if __name__ == "__main__":

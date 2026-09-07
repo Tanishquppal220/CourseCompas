@@ -235,24 +235,26 @@ def _parse_with_pymupdf(pdf_path: Path) -> ParsedPdf:
             for chunk in chunks:
                 page_num = chunk.get("metadata", {}).get("page", 0) + 1
                 text = chunk.get("text", "")
-                
+
                 # Split markdown into paragraph-like blocks
                 blocks = [b.strip() for b in text.split("\n\n") if b.strip()]
                 for i, block in enumerate(blocks):
                     import re
+
                     # Remove markdown formatting for chunkers (headers, bold, italic)
-                    clean_block = re.sub(r'^#+\s*', '', block, flags=re.MULTILINE)
-                    clean_block = clean_block.replace('**', '').replace('__', '')
-                    
-                    text_items.append({
-                        "page": page_num,
-                        "top": i,  # preserve relative order
-                        "text": clean_block,
-                    })
+                    clean_block = re.sub(r"^#+\s*", "", block, flags=re.MULTILINE)
+                    clean_block = clean_block.replace("**", "").replace("__", "")
+
+                    text_items.append(
+                        {
+                            "page": page_num,
+                            "top": i,  # preserve relative order
+                            "text": clean_block,
+                        }
+                    )
         except Exception as exc:  # noqa: BLE001
             print(
-                f"[parse] text extraction warning "
-                f"{pdf_path.name}: {exc}",
+                f"[parse] text extraction warning {pdf_path.name}: {exc}",
                 flush=True,
             )
 

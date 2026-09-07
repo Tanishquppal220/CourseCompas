@@ -14,8 +14,11 @@ from sqlalchemy import text
 # 1. Define Tools for the Agent
 # ==============================================================================
 
+
 @tool
-def retrieve_syllabus_documents(query: str, course_code: str | None = None, doc_type: str | None = None) -> str:
+def retrieve_syllabus_documents(
+    query: str, course_code: str | None = None, doc_type: str | None = None
+) -> str:
     """
     Search the university course documents database.
 
@@ -34,7 +37,9 @@ def retrieve_syllabus_documents(query: str, course_code: str | None = None, doc_
     """
     db = SessionLocal()
     try:
-        docs = search_documents(db, query, k=5, course_code=course_code, prefer_doc_type=doc_type)
+        docs = search_documents(
+            db, query, k=5, course_code=course_code, prefer_doc_type=doc_type
+        )
         if not docs:
             return "No relevant syllabus documents found."
 
@@ -88,7 +93,7 @@ def retrieve_policy_benefits(query: str) -> str:
 def query_curriculum_database(sql_query: str) -> str:
     """
     Execute a read-only SQL query against the university program curriculum database to answer structural questions.
-    
+
     Database Schema:
     - terms (id, number, variant, label)
     - courses (id, code, title, lecture_hours, tutorial_hours, practical_hours, credits, contact_hours)
@@ -98,7 +103,7 @@ def query_curriculum_database(sql_query: str) -> str:
     - elective_baskets (id, name, term_id)
     - basket_options (id, basket_id, course_id, elective_area_id, s_no)
     - term_slots (id, term_id, s_no, display_name, course_id, basket_id, course_type_code, course_nature_code)
-    
+
     Args:
         sql_query: A raw PostgreSQL query. Example: "SELECT c.code, c.title FROM courses c JOIN term_slots ts ON ts.course_id = c.id WHERE ts.term_id = 5"
     """
@@ -106,18 +111,30 @@ def query_curriculum_database(sql_query: str) -> str:
     try:
         # Security: Enforce read-only transaction at the PostgreSQL level
         db.execute(text("SET TRANSACTION READ ONLY;"))
-        
+
         normalized = sql_query.strip().upper()
         if not normalized.startswith(("SELECT", "WITH")):
             return "Error: Only read-only SELECT or WITH queries are allowed on the curriculum database."
-            
-        if any(keyword in normalized for keyword in ["INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "GRANT", "TRUNCATE", "EXEC"]):
+
+        if any(
+            keyword in normalized
+            for keyword in [
+                "INSERT",
+                "UPDATE",
+                "DELETE",
+                "DROP",
+                "ALTER",
+                "GRANT",
+                "TRUNCATE",
+                "EXEC",
+            ]
+        ):
             return "Error: Data mutation and administrative commands are strictly forbidden."
-            
+
         result = db.execute(text(sql_query)).fetchall()
         if not result:
             return "Query executed successfully, but returned 0 rows."
-            
+
         return json.dumps([dict(row._mapping) for row in result], default=str)
     except Exception as e:  # noqa: BLE001
         return f"Error executing SQL: {e!s}"
@@ -146,13 +163,23 @@ def maximize_academic_benefits(achievements: str, courses: str) -> str:
         benefit_records = search_benefits(db, achievements, k=6)
         summary = ["### Retrieved Policy Criteria for Stacking Analysis:\n"]
         for b in benefit_records:
-            summary.append(f"- **{b.get('section_title', 'Policy')}** [{b.get('chunk_type', '')}]: {b.get('content', '')[:180]}...")
+            summary.append(
+                f"- **{b.get('section_title', 'Policy')}** [{b.get('chunk_type', '')}]: {b.get('content', '')[:180]}..."
+            )
 
         summary.append("\n### Stacking & Optimization Rules to Apply:")
-        summary.append("1. Assign each achievement to a separate course (LPU strictly enforces 1 benefit per course per term).")
-        summary.append("2. Allocate high-value waivers (Full CA + MTE or Grade Jump to O) to the highest-credit courses for maximum SGPA boost.")
-        summary.append("3. Check if student's CGPA >= 7.5: if yes, simultaneously stack the 10% Attendance Benefit across all courses.")
-        summary.append("4. Remind student to submit a distinct nomination on UMS for each course via 'Placement Services / Academic Services >>> Special Academic Benefit'.")
+        summary.append(
+            "1. Assign each achievement to a separate course (LPU strictly enforces 1 benefit per course per term)."
+        )
+        summary.append(
+            "2. Allocate high-value waivers (Full CA + MTE or Grade Jump to O) to the highest-credit courses for maximum SGPA boost."
+        )
+        summary.append(
+            "3. Check if student's CGPA >= 7.5: if yes, simultaneously stack the 10% Attendance Benefit across all courses."
+        )
+        summary.append(
+            "4. Remind student to submit a distinct nomination on UMS for each course via 'Placement Services / Academic Services >>> Special Academic Benefit'."
+        )
         return "\n".join(summary)
     finally:
         db.close()
@@ -179,14 +206,20 @@ def check_academic_eligibility(benefit_type: str, cgpa: float) -> str:
             return f"Not Eligible: Student's CGPA ({cgpa}) is below the mandatory 6.0 threshold for internships."
     elif any(x in benefit_type for x in ["grade", "publish", "patent"]):
         return "Eligible: Grade upgradation (e.g. Scopus Q1 paper) has no minimum CGPA requirement."
-    
+
     return "Unknown benefit type. Please consult the manual policies."
+
 
 # ==============================================================================
 # 2. Main Execution Function
 # ==============================================================================
 
-def run_agent(query: str, user_reg_no: str | None = None, chat_history: list[dict[str, Any]] | None = None) -> tuple[str, list]:
+
+def run_agent(
+    query: str,
+    user_reg_no: str | None = None,
+    chat_history: list[dict[str, Any]] | None = None,
+) -> tuple[str, list]:
     """
     Runs the agent with full tool-calling and conversational memory support.
     """
@@ -194,13 +227,15 @@ def run_agent(query: str, user_reg_no: str | None = None, chat_history: list[dic
     profile = {}
     try:
         if user_reg_no:
-            user_query = db.query(User).filter(User.registration_number == user_reg_no).first()
+            user_query = (
+                db.query(User).filter(User.registration_number == user_reg_no).first()
+            )
             if user_query:
                 profile = {
                     "registration_number": user_query.registration_number,
                     "current_term": user_query.current_term,
                     "current_cgpa": float(user_query.cgpa) if user_query.cgpa else 0.0,
-                    "program_name": user_query.program
+                    "program_name": user_query.program,
                 }
     finally:
         db.close()
@@ -219,7 +254,7 @@ def run_agent(query: str, user_reg_no: str | None = None, chat_history: list[dic
 
     # Convert past history into LangChain messages
     messages = []
-    
+
     # Inject student profile as a system message
     system_ctx = (
         f"You are advising an LPU student (Reg No: {profile.get('registration_number', 'Guest')}).\n"
@@ -253,10 +288,10 @@ def run_agent(query: str, user_reg_no: str | None = None, chat_history: list[dic
 
     # Run the Agent
     result = agent.invoke({"messages": messages})
-    
+
     last_message = result["messages"][-1]
     content = last_message.content
-    
+
     # Stringify in case of block formatting, filtering out thinking/reasoning blocks
     if isinstance(content, list):
         text_parts = []
@@ -272,10 +307,12 @@ def run_agent(query: str, user_reg_no: str | None = None, chat_history: list[dic
         response_text = "".join(text_parts)
     else:
         response_text = str(content)
-        
+
     # Strip any text-level reasoning or think tags (e.g. <reasoning>...</reasoning>)
-    response_text = re.sub(r"<(?:reasoning|think)>[\s\S]*?</(?:reasoning|think)>", "", response_text).strip()
-        
+    response_text = re.sub(
+        r"<(?:reasoning|think)>[\s\S]*?</(?:reasoning|think)>", "", response_text
+    ).strip()
+
     # Extract source citations from any tool calls executed in this turn
     sources = []
     for msg in result.get("messages", []):

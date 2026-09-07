@@ -8,8 +8,9 @@ import {
   UserPlus,
   User as UserIcon,
   Compass,
+  Trash2,
 } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/authContext";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -19,6 +20,7 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarGroup,
@@ -33,7 +35,46 @@ interface ChatSession {
 export function AppSidebar() {
   const { user, token } = useAuth();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleDeleteSession = async (
+    sessionId: string,
+    e: React.MouseEvent
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!window.confirm("Are you sure you want to delete this chat session?")) {
+      return;
+    }
+
+    if (!token) return;
+
+    setDeletingId(sessionId);
+    try {
+      const res = await fetch(`/api/chat/sessions/${sessionId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.ok) {
+        setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+        if (location.pathname === `/chat/${sessionId}`) {
+          navigate("/");
+        }
+      } else {
+        console.error("Failed to delete session");
+      }
+    } catch (err) {
+      console.error("Error deleting session:", err);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   useEffect(() => {
     if (user && token) {
@@ -84,17 +125,34 @@ export function AppSidebar() {
           <SidebarGroup>
             <SidebarGroupLabel>Recent conversations</SidebarGroupLabel>
             <SidebarMenu>
-              {sessions.map((session) => (
-                <SidebarMenuItem key={session.id}>
-                  <SidebarMenuButton
-                    tooltip={session.title}
-                    render={<Link to={`/chat/${session.id}`} />}
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                    <span>{session.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {sessions.map((session) => {
+                const isActive = location.pathname === `/chat/${session.id}`;
+                const isDeleting = deletingId === session.id;
+
+                return (
+                  <SidebarMenuItem key={session.id}>
+                    <SidebarMenuButton
+                      tooltip={session.title}
+                      isActive={isActive}
+                      render={<Link to={`/chat/${session.id}`} />}
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      <span>{session.title}</span>
+                    </SidebarMenuButton>
+                    <SidebarMenuAction
+                      showOnHover
+                      title="Delete chat"
+                      aria-label="Delete chat"
+                      disabled={isDeleting}
+                      className="cursor-pointer text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                      onClick={(e) => handleDeleteSession(session.id, e)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">Delete session</span>
+                    </SidebarMenuAction>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroup>
         )}

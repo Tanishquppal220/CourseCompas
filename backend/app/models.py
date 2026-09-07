@@ -19,32 +19,36 @@ Base = declarative_base()
 # Matches the embedding model configured in app.embeddings.
 EMBEDDING_DIM = 384
 
+
 class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     registration_number = Column(String(50), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
-    
+
     # Academic Profile Information
     cgpa = Column(Numeric(4, 2), nullable=True)
     current_term = Column(String(50), nullable=True)
     program = Column(String(150), nullable=True)
 
+
 class ChatSession(Base):
     __tablename__ = "chat_sessions"
-    id = Column(String(36), primary_key=True) # UUID string
+    id = Column(String(36), primary_key=True)  # UUID string
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     title = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=func.now())
+
 
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
     id = Column(Integer, primary_key=True, autoincrement=True)
     session_id = Column(String(36), ForeignKey("chat_sessions.id"), nullable=False)
-    role = Column(String(50), nullable=False) # 'user' or 'assistant'
+    role = Column(String(50), nullable=False)  # 'user' or 'assistant'
     content = Column(Text, nullable=False)
     created_at = Column(DateTime, default=func.now())
+
 
 class CourseType(Base):
     __tablename__ = "course_types"
@@ -80,6 +84,7 @@ class Course(Base):
     credits = Column(Numeric(4, 1), nullable=False)
     contact_hours = Column(Numeric(4, 1), nullable=False)
 
+
 class Term(Base):
     __tablename__ = "terms"
 
@@ -94,6 +99,7 @@ class Term(Base):
         UniqueConstraint("number", "variant", name="uq_term_number_variant"),
     )
 
+
 class ElectiveBasket(Base):
     __tablename__ = "elective_baskets"
 
@@ -105,6 +111,7 @@ class ElectiveBasket(Base):
     options = relationship(
         "BasketOption", back_populates="basket", cascade="all, delete-orphan"
     )
+
 
 class BasketOption(Base):
     __tablename__ = "basket_options"
@@ -124,6 +131,7 @@ class BasketOption(Base):
             "basket_id", "course_id", "elective_area_id", name="uq_basket_course_area"
         ),
     )
+
 
 class TermSlot(Base):
     __tablename__ = "term_slots"
@@ -152,8 +160,8 @@ class TermSlot(Base):
     __table_args__ = (UniqueConstraint("term_id", "s_no", name="uq_term_sno"),)
 
 
-
 # Embedded models for API responses
+
 
 class CourseDocumentChunk(Base):
     __tablename__ = "course_doc_chunks"
@@ -199,12 +207,13 @@ class CourseDocumentChunk(Base):
     )
 
     embedding = Column(Vector(EMBEDDING_DIM), nullable=False)
-    
+
     # Full Text Search column
     # Full Text Search column
     fts = Column(TSVECTOR, index=True)
 
     course = relationship("Course")
+
 
 class BenefitChunk(Base):
     __tablename__ = "benefit_chunks"
@@ -237,6 +246,6 @@ class BenefitChunk(Base):
     )
 
     embedding = Column(Vector(EMBEDDING_DIM), nullable=False)
-    
+
     # Full Text Search column
     fts = Column(TSVECTOR, index=True)

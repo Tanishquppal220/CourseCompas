@@ -123,9 +123,39 @@ export function ChatWindow() {
     }
   };
 
+  const [isDeletingSession, setIsDeletingSession] = useState(false);
+
+  const handleDeleteCurrentSession = async () => {
+    if (!id || !token || isDeletingSession) return;
+    if (!window.confirm("Are you sure you want to delete this chat session?")) {
+      return;
+    }
+
+    setIsDeletingSession(true);
+    try {
+      const res = await fetch(`/api/chat/sessions/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        navigate("/");
+      } else {
+        console.error("Failed to delete session");
+      }
+    } catch (err) {
+      console.error("Error deleting session:", err);
+    } finally {
+      setIsDeletingSession(false);
+    }
+  };
+
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <ChatHeader title={sessionTitle} />
+      <ChatHeader
+        title={sessionTitle}
+        onDelete={id ? handleDeleteCurrentSession : undefined}
+        isDeleting={isDeletingSession}
+      />
 
       <MessageScroller
         messages={messages}

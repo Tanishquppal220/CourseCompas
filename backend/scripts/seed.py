@@ -20,6 +20,7 @@ you can decide whether to reconcile them):
     Engineering Minor Elective 2 basket, but as 2-0-2 in the Open Minor
     basket (row 128). The first occurrence (Term 4) is kept as canonical.
 """
+
 import sys
 from pathlib import Path
 

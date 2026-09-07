@@ -10,6 +10,7 @@ Three chunkers, one per source shape:
   * benefits_clean.md                                     -> policy overview,
     criteria-row, and special-note chunks.
 """
+
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -20,11 +21,23 @@ COURSE_CODE_RE = re.compile(r"\b([A-Z]{3}\d{3})\b")
 UNIT_MARKER_RE = re.compile(r"^Unit\s+([IVX]+)$")
 PRACTICAL_RE = re.compile(r"^\d{2}\.[^\d]")
 REF_CONT_RE = re.compile(r"^\d\s*\.\s")
-TOPIC_SPLIT_RE = re.compile(r"^\s*([A-Za-z][A-Za-z0-9 &/()\-',.]{2,90}?)\s*[:：]\s*(.+)$", re.DOTALL)
+TOPIC_SPLIT_RE = re.compile(
+    r"^\s*([A-Za-z][A-Za-z0-9 &/()\-',.]{2,90}?)\s*[:：]\s*(.+)$", re.DOTALL
+)
 CO_RE = re.compile(r"CO(\d+)\s*::\s*(.+?)(?=CO\d+\s*::|$)", re.DOTALL)
 
-ROMAN = {"I": 1, "II": 2, "III": 3, "IV": 4, "V": 5, "VI": 6,
-         "VII": 7, "VIII": 8, "IX": 9, "X": 10}
+ROMAN = {
+    "I": 1,
+    "II": 2,
+    "III": 3,
+    "IV": 4,
+    "V": 5,
+    "VI": 6,
+    "VII": 7,
+    "VIII": 8,
+    "IX": 9,
+    "X": 10,
+}
 
 
 @dataclass
@@ -61,9 +74,9 @@ def _collect_text_items(text_items):
 def chunk_syllabus(text_items) -> list[Chunk]:
     chunks: list[Chunk] = []
     current_unit: int | None = None
-    unit_buf: list[tuple] = []          # (page, topic_title, content)
+    unit_buf: list[tuple] = []  # (page, topic_title, content)
     outcomes_buf: list[str] = []
-    practicals: list[tuple] = []        # (page, text)
+    practicals: list[tuple] = []  # (page, text)
     ref_items: list[str] = []
     in_refs = False
     overview_parts: list[tuple] = []
@@ -100,7 +113,10 @@ def chunk_syllabus(text_items) -> list[Chunk]:
             continue
 
         # Text books / references enter references mode.
-        if text.startswith(("Text Books", "References")) or "text books:" in text[:40].lower():
+        if (
+            text.startswith(("Text Books", "References"))
+            or "text books:" in text[:40].lower()
+        ):
             in_refs = True
             ref_items.append(text)
             continue
@@ -139,7 +155,12 @@ def chunk_syllabus(text_items) -> list[Chunk]:
 
     # Course outcomes chunks.
     co_buf = "\n".join(outcomes_buf)
-    co_buf = re.sub(r"\s*Through this course students should be able to\s*$", "", co_buf, flags=re.IGNORECASE)
+    co_buf = re.sub(
+        r"\s*Through this course students should be able to\s*$",
+        "",
+        co_buf,
+        flags=re.IGNORECASE,
+    )
     co_buf = re.sub(r"^Course Outcomes\s*:", "", co_buf, flags=re.IGNORECASE).strip()
     if co_buf:
         matched = list(CO_RE.finditer(co_buf))
@@ -203,8 +224,12 @@ def chunk_syllabus(text_items) -> list[Chunk]:
 
 
 def _clean_refs(text: str) -> str:
-    text = re.sub(r"\b(Session\s+\d{4}\s*-\s*\d{2}|Page\s*:?\s*\d+/\d+)\b",
-                  "", text, flags=re.IGNORECASE)
+    text = re.sub(
+        r"\b(Session\s+\d{4}\s*-\s*\d{2}|Page\s*:?\s*\d+/\d+)\b",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
     text = re.sub(r"[ \t]{2,}", " ", text)
     return "\n".join(ln.strip() for ln in text.splitlines() if ln.strip())
 
@@ -230,8 +255,11 @@ def _flush_unit(chunks: list[Chunk], unit_num: int | None, unit_buf: list[tuple]
                 section_title=section_title,
                 chunk_type="unit",
                 content=content,
-                metadata={"document_kind": "syllabus", "unit": unit_num,
-                          "unit_label": unit_label},
+                metadata={
+                    "document_kind": "syllabus",
+                    "unit": unit_num,
+                    "unit_label": unit_label,
+                },
             )
         )
 
@@ -263,12 +291,18 @@ def _merge_label_cells(cells: list) -> list:
     """Fold adjacent ('Lecture', '2') / ('Week', '1') cells into one."""
     merged = []
     for i, cell in enumerate(cells):
-        if (_SINGLE_LABEL_RE.match(cell.strip())
-                and i + 1 < len(cells)
-                and cells[i + 1].strip().isdigit()):
+        if (
+            _SINGLE_LABEL_RE.match(cell.strip())
+            and i + 1 < len(cells)
+            and cells[i + 1].strip().isdigit()
+        ):
             merged.append(f"{cell.strip()} {cells[i + 1].strip()}")
             continue
-        if i > 0 and _SINGLE_LABEL_RE.match(cells[i - 1].strip()) and cell.strip().isdigit():
+        if (
+            i > 0
+            and _SINGLE_LABEL_RE.match(cells[i - 1].strip())
+            and cell.strip().isdigit()
+        ):
             continue
         merged.append(cell)
     return merged
@@ -289,8 +323,15 @@ def _clean_cells(cells: list) -> list:
 
 
 def _classify_lecture_cells(cells) -> dict:
-    out = {"week": None, "lecture": None, "topic": "", "refs": [],
-           "desc": [], "outcomes": [], "pedagog": []}
+    out = {
+        "week": None,
+        "lecture": None,
+        "topic": "",
+        "refs": [],
+        "desc": [],
+        "outcomes": [],
+        "pedagog": [],
+    }
     cleaned = _clean_cells(cells)
     for i, cell in enumerate(cleaned):
         lowered = cell.lower()
@@ -311,18 +352,29 @@ def _classify_lecture_cells(cells) -> dict:
         if re.fullmatch(r"[TRRifetories0-9\s\-/]+", cell) and len(cell) < 12:
             continue
 
-        if (re.search(r"\bL\d+\s*:", cell) or "lecture-0" in lowered
-                or "this lecture" in lowered or "this module" in lowered):
+        if (
+            re.search(r"\bL\d+\s*:", cell)
+            or "lecture-0" in lowered
+            or "this lecture" in lowered
+            or "this module" in lowered
+        ):
             out["desc"].append(cell)
             continue
-        if ("students would be able" in lowered
-                or "understand the" in lowered or "understand how" in lowered
-                or ("understanding" in lowered and "able" in lowered)
-                or "will be able to" in lowered):
+        if (
+            "students would be able" in lowered
+            or "understand the" in lowered
+            or "understand how" in lowered
+            or ("understanding" in lowered and "able" in lowered)
+            or "will be able to" in lowered
+        ):
             out["outcomes"].append(cell)
             continue
-        if ("presentation" in lowered or "demonstration" in lowered
-                or "programming hands-on" in lowered or "case study" in lowered):
+        if (
+            "presentation" in lowered
+            or "demonstration" in lowered
+            or "programming hands-on" in lowered
+            or "case study" in lowered
+        ):
             out["pedagog"].append(cell)
             continue
 
@@ -418,7 +470,9 @@ def chunk_ip(text_items, tables) -> list[Chunk]:
                         page=pg,
                         section_title=_truncate(section_title, 120),
                         chunk_type="reference",
-                        content=f"{code}: {title} by {author}, {publisher}".strip().rstrip(","),
+                        content=f"{code}: {title} by {author}, {publisher}".strip().rstrip(
+                            ","
+                        ),
                         metadata={"document_kind": "ip", "ref_code": code},
                     )
                 )
@@ -445,10 +499,16 @@ def chunk_ip(text_items, tables) -> list[Chunk]:
             if classified["lecture"] is not None:
                 if current is not None:
                     _append_lecture_chunk(chunks, current)
-                current = {"week": carried_week, "lecture": classified["lecture"],
-                           "topic": classified["topic"], "refs": classified["refs"],
-                           "desc": classified["desc"], "outcomes": classified["outcomes"],
-                           "pedagog": classified["pedagog"], "page": table.page}
+                current = {
+                    "week": carried_week,
+                    "lecture": classified["lecture"],
+                    "topic": classified["topic"],
+                    "refs": classified["refs"],
+                    "desc": classified["desc"],
+                    "outcomes": classified["outcomes"],
+                    "pedagog": classified["pedagog"],
+                    "page": table.page,
+                }
                 if classified["week"] is not None:
                     carried_week = classified["week"]
             else:
@@ -492,7 +552,9 @@ def _append_lecture_chunk(chunks: list[Chunk], row: dict):
     content = _format_lecture(row)
     if not content.strip():
         return
-    section_title = _truncate(row["topic"], 160) if row["topic"] else f"Lecture {row['lecture']}"
+    section_title = (
+        _truncate(row["topic"], 160) if row["topic"] else f"Lecture {row['lecture']}"
+    )
     chunks.append(
         Chunk(
             doc_type="IP",
@@ -544,7 +606,13 @@ def _overview_from_table(table) -> str:
 # ---------------------------------------------------------------------------
 
 
-SECTION_BLOCK_WORDS = {"category", "stipend", "sr. no", "types of projects", "achievement level"}
+SECTION_BLOCK_WORDS = {
+    "category",
+    "stipend",
+    "sr. no",
+    "types of projects",
+    "achievement level",
+}
 
 
 def chunk_benefits(md_path: Path) -> list[Chunk]:
@@ -600,16 +668,19 @@ def chunk_benefits(md_path: Path) -> list[Chunk]:
                     section_title=current_section,
                     chunk_type="policy_overview",
                     content=f"Section: {current_section}\n"
-                            f"Type: Policy Overview & Eligibility Rules\n"
-                            f"Details: {description_text}",
-                    metadata={"section": current_section, "table_index": table_index,
-                              "type": "policy_overview"},
+                    f"Type: Policy Overview & Eligibility Rules\n"
+                    f"Details: {description_text}",
+                    metadata={
+                        "section": current_section,
+                        "table_index": table_index,
+                        "type": "policy_overview",
+                    },
                 )
             )
 
         # Tabular rows with backward & forward fill.
         if header_idx != -1 and header_idx + 1 < len(lines):
-            headers = [h if h else f"Field_{i+1}" for i, h in enumerate(headers)]
+            headers = [h if h else f"Field_{i + 1}" for i, h in enumerate(headers)]
 
             benefit_col_name = None
             for h in headers:
@@ -618,7 +689,7 @@ def chunk_benefits(md_path: Path) -> list[Chunk]:
                     break
 
             raw_rows = []
-            for data_line in lines[header_idx + 1:]:
+            for data_line in lines[header_idx + 1 :]:
                 if data_line.startswith("| ---"):
                     continue
                 cells = [c.strip() for c in data_line.split("|")[1:-1]]
@@ -647,7 +718,14 @@ def chunk_benefits(md_path: Path) -> list[Chunk]:
                         last_values[h] = val
                         row_dict[h] = val
                     elif h in last_values and any(
-                        k in h.lower() for k in ["stipend", "duration", "category", "types", "achievement"]
+                        k in h.lower()
+                        for k in [
+                            "stipend",
+                            "duration",
+                            "category",
+                            "types",
+                            "achievement",
+                        ]
                     ):
                         row_dict[h] = last_values[h]
 
@@ -657,7 +735,9 @@ def chunk_benefits(md_path: Path) -> list[Chunk]:
                 for k, v in row_dict.items():
                     context_lines.append(f"{k}: {v}")
                 if description_text and len(row_dict) > 1:
-                    context_lines.append(f"(General Policy: {description_text[:120]}...)")
+                    context_lines.append(
+                        f"(General Policy: {description_text[:120]}...)"
+                    )
 
                 chunks.append(
                     Chunk(
@@ -666,8 +746,11 @@ def chunk_benefits(md_path: Path) -> list[Chunk]:
                         section_title=current_section,
                         chunk_type="criteria_row",
                         content="\n".join(context_lines),
-                        metadata={"section": current_section, "table_index": table_index,
-                                  "fields": row_dict},
+                        metadata={
+                            "section": current_section,
+                            "table_index": table_index,
+                            "fields": row_dict,
+                        },
                     )
                 )
 
@@ -680,8 +763,11 @@ def chunk_benefits(md_path: Path) -> list[Chunk]:
                     section_title=current_section,
                     chunk_type="special_note",
                     content=f"Section: {current_section}\nSpecial Policy Note: {note}",
-                    metadata={"section": current_section, "table_index": table_index,
-                              "type": "special_policy_note"},
+                    metadata={
+                        "section": current_section,
+                        "table_index": table_index,
+                        "type": "special_policy_note",
+                    },
                 )
             )
 
