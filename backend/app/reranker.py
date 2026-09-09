@@ -40,8 +40,12 @@ def rerank_documents(
         for doc, score in zip(documents, scores, strict=False):
             doc["rerank_score"] = round(float(score), 4)
 
-        ranked = sorted(documents, key=lambda x: x.get("rerank_score", 0.0), reverse=True)
+        ranked = sorted(
+            documents, key=lambda x: x.get("rerank_score", 0.0), reverse=True
+        )
         return ranked[:top_k]
     except Exception as e:  # noqa: BLE001
-        logger.warning(f"Reranking failed ({e}), falling back to initial ranking order.")
+        logger.warning(
+            f"Reranking failed ({e}), falling back to initial ranking order."
+        )
         return documents[:top_k]
