@@ -210,6 +210,90 @@ def check_academic_eligibility(benefit_type: str, cgpa: float) -> str:
     return "Unknown benefit type. Please consult the manual policies."
 
 
+@tool
+def auto_submit_academic_benefit_portal(
+    category: str,
+    course_code: str,
+    achievement_summary: str,
+    student_name: str | None = None,
+    student_reg_no: str | None = None,
+    target_portal_url: str | None = None,
+) -> str:
+    """
+    Automates submitting an academic benefit nomination or application on the university portal using a stealth Playwright browser.
+    If the submission hits a Cloudflare Turnstile challenge, dynamic DOM rendering delay, missing field, or required human action:
+    It pauses execution, generates diagnostic troubleshooting instructions, and prompts the user on how to resolve it in the opened browser window.
+
+    Args:
+        category: Benefit scheme category (e.g. "Internship beyond Curriculum", "Research Publications (Scopus)", "Technical Competitions / Hackathons")
+        course_code: The mapped LPU course code (e.g. "CSE205")
+        achievement_summary: Summary of achievement details (duration, stipend, tier, publication details)
+        student_name: Name of the student (optional)
+        student_reg_no: Student registration number (optional)
+        target_portal_url: Target portal URL (optional, defaults to local or university portal)
+    """
+    import asyncio
+    import uuid
+    import nest_asyncio
+    from app.browser_agent import start_portal_automation
+
+    nest_asyncio.apply()
+
+    thread_id = f"auto_{uuid.uuid4().hex[:8]}"
+    candidate_payload = {
+        "name": student_name or "Student",
+        "registration_number": student_reg_no or "12200001",
+        "category": category,
+        "course_code": course_code,
+        "achievement_summary": achievement_summary,
+        "details": achievement_summary,
+    }
+
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            result = loop.run_until_complete(
+                start_portal_automation(
+                    candidate_info=candidate_payload,
+                    thread_id=thread_id,
+                    target_url=target_portal_url,
+                )
+            )
+        else:
+            result = asyncio.run(
+                start_portal_automation(
+                    candidate_info=candidate_payload,
+                    thread_id=thread_id,
+                    target_url=target_portal_url,
+                )
+            )
+
+        if result.get("is_paused"):
+            diag = result.get("diagnostic", {})
+            summary = [
+                "⚠️ **Browser Automation Paused: Human Interaction Required**",
+                f"- **Thread ID:** `{result.get('thread_id')}`",
+                f"- **Active Page:** {result.get('active_url')}",
+                f"- **Blocker Identified:** `{diag.get('blocker_type', 'verification_required')}`",
+                f"- **Diagnosis:** {diag.get('diagnostic_summary', 'A verification screen or rendering blocker was encountered.')}",
+                f"- **Action Required by You:** {diag.get('user_action_prompt', 'Please inspect the opened browser window and resolve the blocker.')}",
+                "\n*Once you have completed the action in the browser, please reply with 'Done' or call `/api/automation/resume` with this thread ID to proceed.*"
+            ]
+            return "\n".join(summary)
+
+        elif result.get("execution_status") == "complete":
+            messages = result.get("messages", [])
+            last_msg = messages[-1] if messages else "Application submitted successfully."
+            return f"✅ **Portal Application Completed:** {last_msg}"
+
+        else:
+            messages = result.get("messages", [])
+            return f"Automation status: {result.get('execution_status')}. Messages: {' | '.join(messages)}"
+
+    except Exception as e:
+        return f"Browser automation encountered an error: {e!s}"
+
+
 # ==============================================================================
 # 2. Main Execution Function
 # ==============================================================================
@@ -247,6 +331,7 @@ def run_agent(
         maximize_academic_benefits,
         query_curriculum_database,
         check_academic_eligibility,
+        auto_submit_academic_benefit_portal,
     ]
 
     # Create the LLM Agent
