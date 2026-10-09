@@ -232,6 +232,7 @@ sequenceDiagram
 
   CREATE INDEX ix_course_doc_chunks_fts ON course_doc_chunks USING GIN (fts);
   ```
+  The expression is single-sourced as `FTS_EXPRESSION` in `app/models.py` and applied by `alembic/versions/0002_add_full_text_search.py`.
 
 ### 6.3 Hybrid Scoring Formula
 To balance keyword precision (course codes, specific terminology) and semantic context:
@@ -247,13 +248,14 @@ Only chunks satisfying either $(\text{CosineDistance} < 0.6)$ or $(\text{fts @@ 
 
 ## 7. Document Ingestion & Parsing Subsystem
 
-Located in `backend/scripts/`:
-- `parse_pdf.py`: PDF layout extraction supporting both **PyMuPDF** (`pymupdf4llm` with layout analysis) and **Docling**. Supports process caching in `.cache/` to ensure lightning-fast repeat runs.
-- `chunkers.py`: Domain-specific chunking logic:
-  - `chunk_syllabus`: Parses course overview, units, topics, course outcomes (`CO1`..`CO6`), textbooks, reference books, and lab practicals.
-  - `chunk_ip`: Parses complex 20+ page instruction plan tables into per-lecture units with associated pedagogical tools, outcomes, and reading references.
-  - `chunk_benefits`: Chunks the EduRevolution policy document into distinct policy overviews, criteria matrix rows, and submission rules.
-- `cleaners.py`: Strips repetitive university headers, footers, tentative plan disclaimers, and boilerplate text.
-- `ingest.py`: End-to-end ingestion orchestrator with multi-process worker pool (`--workers N`), incremental change detection, and batch vectorization.
-- `seed.py`: Relational curriculum seeding for all 8 terms, 250+ courses, elective areas, and basket options.
-- `add_fts.py`: Migration script applying the stored `tsvector` generated columns and GIN indexes.
+Located in `backend/scripts/` (thin CLI entrypoints) and `backend/scripts/ingestion/` (implementation):
+- `ingestion/parsing/`: PDF layout extraction supporting both **PyMuPDF** (`pymupdf4llm` with layout analysis) and **Docling**, selected by `PARSER_BACKEND`. `cache.py` handles process caching in `.cache/` for lightning-fast repeat runs.
+- `ingestion/chunking/`: Domain-specific chunking logic, one module per source type:
+  - `syllabus.py` (`chunk_syllabus`): Parses course overview, units, topics, course outcomes (`CO1`..`CO6`), textbooks, reference books, and lab practicals.
+  - `instruction_plan.py` (`chunk_ip`): Parses complex 20+ page instruction plan tables into per-lecture units with associated pedagogical tools, outcomes, and reading references.
+  - `benefits.py` (`chunk_benefits`): Chunks the EduRevolution policy document into distinct policy overviews, criteria matrix rows, and submission rules.
+  - `chunk.py`: shared `Chunk` dataclass and helpers.
+- `ingestion/cleaning/`: Strips repetitive university headers, footers, tentative plan disclaimers, and boilerplate text.
+- `ingestion/pipeline.py`: End-to-end ingestion orchestrator (`ingest.py` CLI) with multi-process worker pool (`--workers N`), incremental change detection, and batch vectorization.
+- `seeding/`: Relational curriculum seeding (`seed.py` CLI) for all 8 terms, 250+ courses, elective areas, and basket options.
+- `alembic/` + `alembic.ini`: Schema migrations (baseline, full-text search, and nullable `page_number`). `scripts/add_fts.py` is a thin wrapper for the FTS revision; general changes use `uv run alembic upgrade head`.

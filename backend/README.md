@@ -24,12 +24,21 @@ backend/
 │   ├── Schema.md        # Raw curriculum markdown specification
 │   └── benefits_clean.md# Cleaned EduRevolution academic benefits policy text
 ├── scripts/
-│   ├── seed.py          # Relational database seeder (terms, courses, baskets, slots)
-│   ├── ingest.py        # End-to-end PDF parser, chunker, and vector embedder
-│   ├── chunkers.py      # Domain-specific semantic chunkers for Syllabus, IP, & Benefits
-│   ├── cleaners.py      # Text cleaners and boilerplate filters
-│   ├── parse_pdf.py     # PDF layout extractor supporting PyMuPDF and Docling
-│   └── add_fts.py       # Adds generated tsvector columns and GIN indexes
+│   ├── ingest.py        # CLI entrypoint for the ingestion pipeline
+│   ├── seed.py          # CLI entrypoint for relational seeding
+│   ├── add_fts.py       # CLI wrapper: applies the FTS Alembic revision
+│   ├── ingestion/       # parse -> clean -> chunk -> embed -> store
+│   │   ├── README.md    # stage-by-stage map of the pipeline
+│   │   ├── pipeline.py  # orchestration (what runs when)
+│   │   ├── cli.py       # argument parsing
+│   │   ├── database.py  # tables + HNSW vector indexes
+│   │   ├── parsing/     # PDF -> ParsedPdf (PyMuPDF / Docling backends)
+│   │   ├── cleaning/    # whitespace + IP boilerplate/footer removal
+│   │   └── chunking/    # chunkers, one module per document type
+│   ├── seeding/         # curriculum data + loaders + seed routine
+│   └── tools/           # scratch/dev utilities (dump_pdf_markdown.py)
+├── alembic/             # schema migrations (baseline, FTS, nullable page_number)
+├── alembic.ini          # Alembic configuration
 ├── pyproject.toml       # Python dependencies and project metadata
 ├── uv.lock              # Deterministic uv dependency lockfile
 └── .env.example         # Template for environment configuration

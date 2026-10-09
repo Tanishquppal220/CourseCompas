@@ -101,7 +101,7 @@ erDiagram
         string document_name
         string doc_type
         string section_title
-        int page_number
+        int page_number "nullable"
         int chunk_index
         string chunk_type
         text content
@@ -114,7 +114,7 @@ erDiagram
         int id PK
         string document_name
         string section_title
-        int page_number
+        int page_number "nullable"
         int chunk_index
         string chunk_type
         text content
@@ -241,13 +241,13 @@ Stores semantic chunks from course **Syllabus** and **Instruction Plan (IP)** PD
 | `document_name`| `VARCHAR(255)` | — | Source PDF file name (e.g., `CSE205.pdf`) |
 | `doc_type` | `VARCHAR(20)` | `INDEX` | `Syllabus` or `IP` |
 | `section_title`| `VARCHAR(255)` | — | Section or topic heading |
-| `page_number` | `INTEGER` | — | Page in original document |
+| `page_number` | `INTEGER` | `NULL` allowed | Source page number, or `NULL` when the source has no pages |
 | `chunk_index` | `INTEGER` | — | Sequential index within document |
 | `chunk_type` | `VARCHAR(50)` | — | `unit`, `lecture`, `practical`, `course_outcome`, `table_row` |
 | `content` | `TEXT` | — | Cleaned textual content |
 | `metadata` | `JSONB` | — | Additional parsed attributes (e.g., L/T/P, textbooks) |
 | `embedding` | `vector(384)` | **HNSW** (`vector_cosine_ops`) | 384-dim dense vector (`BAAI/bge-small-en-v1.5`) |
-| `fts` | `tsvector` | **GIN** (`ix_course_doc_chunks_fts`) | Stored TSVector for English lexical search |
+| `fts` | `tsvector` | **GIN** (`ix_course_doc_chunks_fts`) | Generated column (`FTS_EXPRESSION`) for English lexical search |
 
 ### 3.2 `benefit_chunks`
 Stores policy text and tabular criteria rows from the **Academic Benefits (EduRevolution)** document.
@@ -257,13 +257,13 @@ Stores policy text and tabular criteria rows from the **Academic Benefits (EduRe
 | `id` | `INTEGER` | `PRIMARY KEY`, `AUTOINCREMENT` | Chunk ID |
 | `document_name`| `VARCHAR(255)` | — | Source document (`Academic Benefits.pdf`) |
 | `section_title`| `VARCHAR(255)` | — | Scheme title (e.g., `Grade Upgradation`, `Duty Leave`) |
-| `page_number` | `INTEGER` | — | Page number |
+| `page_number` | `INTEGER` | `NULL` allowed | Always `NULL` (the benefits markdown has no pages) |
 | `chunk_index` | `INTEGER` | — | Sequential index |
 | `chunk_type` | `VARCHAR(50)` | — | `policy_overview`, `criteria_row`, `special_note` |
 | `content` | `TEXT` | — | Eligibility conditions, proofs required, and benefit formulas |
 | `metadata` | `JSONB` | — | Category, stage, or stipend range metadata |
 | `embedding` | `vector(384)` | **HNSW** (`vector_cosine_ops`) | 384-dim dense vector (`BAAI/bge-small-en-v1.5`) |
-| `fts` | `tsvector` | **GIN** (`ix_benefit_chunks_fts`) | Stored TSVector for English lexical search |
+| `fts` | `tsvector` | **GIN** (`ix_benefit_chunks_fts`) | Generated column (`FTS_EXPRESSION`) for English lexical search |
 
 ---
 
@@ -282,7 +282,7 @@ ON benefit_chunks USING hnsw (embedding vector_cosine_ops);
 - **Query performance**: Sub-10ms similarity queries across tens of thousands of chunks without scanning the whole table.
 
 ### 4.2 Full-Text Search (FTS) Indexing
-Lexical keyword matching uses PostgreSQL GIN indexes on automatically generated `tsvector` columns:
+Lexical keyword matching uses PostgreSQL GIN indexes on automatically generated `tsvector` columns. The expression is defined once as `FTS_EXPRESSION` in `backend/app/models.py` (rendered on fresh databases by `create_all`) and applied to existing databases by `backend/alembic/versions/0002_add_full_text_search.py`:
 ```sql
 ALTER TABLE course_doc_chunks 
 ADD COLUMN IF NOT EXISTS fts tsvector 

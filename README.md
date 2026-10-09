@@ -197,12 +197,18 @@ CourseCompass/
 │   │   ├── Schema.md                # Full academic program structure markdown
 │   │   └── benefits_clean.md        # Cleaned EduRevolution benefits policy markdown
 │   ├── scripts/
-│   │   ├── seed.py                  # Relational curriculum database seeder
-│   │   ├── ingest.py                # PDF parser, chunker, & vector ingestion pipeline
-│   │   ├── chunkers.py              # Domain-specific chunkers (Syllabus, IP, Benefits)
-│   │   ├── cleaners.py              # Text cleaning & boilerplate removal
-│   │   ├── parse_pdf.py             # PDF layout extractor (PyMuPDF / Docling)
-│   │   └── add_fts.py               # Generates tsvector columns and GIN indexes
+│   │   ├── ingest.py                # CLI entrypoint for the ingestion pipeline
+│   │   ├── seed.py                  # CLI entrypoint for relational curriculum seeding
+│   │   ├── add_fts.py               # CLI wrapper: applies the FTS Alembic revision
+│   │   ├── ingestion/               # parse -> clean -> chunk -> embed -> store
+│   │   │   ├── pipeline.py          # ingestion orchestration (what runs when)
+│   │   │   ├── parsing/             # PDF extractors (PyMuPDF / Docling)
+│   │   │   ├── cleaning/            # text cleaning & IP boilerplate removal
+│   │   │   └── chunking/            # chunkers, one module per document type
+│   │   ├── seeding/                 # curriculum data, loaders & seed routine
+│   │   └── tools/                   # scratch/dev utilities
+│   ├── alembic/                     # schema migrations (baseline, FTS, page_number)
+│   ├── alembic.ini                  # Alembic configuration
 │   ├── pyproject.toml               # Python package configuration
 │   └── .env.example                 # Environment variables template
 ├── frontend/                        # React 19 + TypeScript + Vite Frontend SPA

@@ -1,39 +1,31 @@
-from sqlalchemy import text
+"""CLI entrypoint: add full-text search (tsvector + GIN) to the chunk tables.
 
-from app.database import engine
+The implementation is now an Alembic migration
+(``alembic/versions/0002_add_full_text_search.py``); this wrapper applies just
+that revision so the historical command keeps working:
+
+    uv run python scripts/add_fts.py
+
+For general schema changes use Alembic directly, e.g. ``uv run alembic upgrade
+head``.
+"""
+
+import sys
+from pathlib import Path
+
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(BACKEND_DIR))
+
+from alembic.config import Config
+
+from alembic import command
 
 
-def upgrade():
-    with engine.begin() as conn:
-        print("Adding fts to course_doc_chunks...")
-        conn.execute(
-            text("""
-        ALTER TABLE course_doc_chunks 
-        ADD COLUMN IF NOT EXISTS fts tsvector 
-        GENERATED ALWAYS AS (to_tsvector('english', coalesce(section_title, '') || ' ' || coalesce(content, ''))) STORED;
-        """)
-        )
-        conn.execute(
-            text("""
-        CREATE INDEX IF NOT EXISTS ix_course_doc_chunks_fts ON course_doc_chunks USING GIN (fts);
-        """)
-        )
-
-        print("Adding fts to benefit_chunks...")
-        conn.execute(
-            text("""
-        ALTER TABLE benefit_chunks 
-        ADD COLUMN IF NOT EXISTS fts tsvector 
-        GENERATED ALWAYS AS (to_tsvector('english', coalesce(section_title, '') || ' ' || coalesce(content, ''))) STORED;
-        """)
-        )
-        conn.execute(
-            text("""
-        CREATE INDEX IF NOT EXISTS ix_benefit_chunks_fts ON benefit_chunks USING GIN (fts);
-        """)
-        )
+def main() -> None:
+    """Apply the full-text-search Alembic revision."""
+    config = Config(str(BACKEND_DIR / "alembic.ini"))
+    command.upgrade(config, "0002_add_full_text_search")
 
 
 if __name__ == "__main__":
-    upgrade()
-    print("Done!")
+    main()

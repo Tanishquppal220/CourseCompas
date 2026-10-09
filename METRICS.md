@@ -114,7 +114,7 @@ This document provides a factual, evidence-backed audit of the **CourseCompass**
     - Referenced in: `backend/app/embeddings.py` (Line 9)
     - Output vector dimension: `384`
     - Execution library: `sentence-transformers`
-    - *(Historical comment in `backend/scripts/ingest.py` Line 5 references `Qwen3-Embedding-0.6B`)*
+    - *(Historical comment in the old `backend/scripts/ingest.py` referenced `Qwen3-Embedding-0.6B`; the active codebase uses `BAAI/bge-small-en-v1.5`. The comment was dropped when `ingest.py` became a thin CLI over `backend/scripts/ingestion/`.)*
   - **Cross-Encoder Reranker Model**: `BAAI/bge-reranker-base`
     - Referenced in: `backend/app/reranker.py` (Line 13)
     - Execution library: `sentence-transformers`
@@ -139,8 +139,8 @@ This document provides a factual, evidence-backed audit of the **CourseCompass**
 
 #### Non-Training / Operational Batch Sizes Present
 - **Embedding Inference Batch Size**: `BATCH_SIZE = 64` (defined in `backend/app/embeddings.py` Line 11 for batch encoding text chunks).
-- **PDF Layout Extraction Batch Size**: `layout_batch_size = 2` (defined in `backend/scripts/parse_pdf.py` Line 294 for Docling pipeline options).
-- **PDF Table Extraction Batch Size**: `table_batch_size = 2` (defined in `backend/scripts/parse_pdf.py` Line 295 for Docling pipeline options).
+- **PDF Layout Extraction Batch Size**: `layout_batch_size = 2` (defined in `backend/scripts/ingestion/parsing/docling_parser.py` Line 26 for Docling pipeline options).
+- **PDF Table Extraction Batch Size**: `table_batch_size = 2` (defined in `backend/scripts/ingestion/parsing/docling_parser.py` Line 27 for Docling pipeline options).
 
 ---
 
@@ -152,7 +152,7 @@ This document provides a factual, evidence-backed audit of the **CourseCompass**
   - `backend/data/IP/`: **39 files** (38 `.pdf` files and 1 `.docx` file [`CSE273.docx`] containing Instruction Plans with lecture breakdowns, evaluation criteria, and marks weightages).
   - `backend/data/benefits_clean.md`: **1 document** (25,619 bytes / 25 KB; structured Markdown detailing the 8 EduRevolution benefit pathways: 10% Attendance Benefit, Duty Leave, Grade Upgradation, Internships, NPTEL/MOOCs equivalence, Project benefits, RPL, and SCRGM).
   - `backend/data/Schema.md`: **1 document** (41,257 bytes / 41 KB; schema specification of curriculum structures, baskets, and courses).
-  - `backend/scripts/seed.py`: **1 relational seed dataset** (1,202 lines, 50,083 bytes; in-code data tables mapping Terms 1 through 8, course codes, electives, and baskets into PostgreSQL).
+  - `backend/scripts/seeding/`: the relational seed dataset, split into `curriculum_data.py` (data: 972 lines, 42,975 bytes; course codes, elective baskets, Terms 1-8 slot plans), `loaders.py` (idempotent get-or-create helpers), and `load_curriculum.py` (`load_all` + `run`).
 
 ---
 
@@ -199,13 +199,34 @@ This document provides a factual, evidence-backed audit of the **CourseCompass**
 - `backend/app/models.py`: imports none (leaf module)
 - `backend/app/reranker.py`: imports none (leaf module)
 - `backend/app/retrieval.py`: imports `app.embeddings`, `app.models`, `app.reranker`
-- `backend/scripts/add_fts.py`: imports `app.database`
-- `backend/scripts/chunkers.py`: imports `scripts.cleaners`
-- `backend/scripts/cleaners.py`: imports none (leaf module)
-- `backend/scripts/ingest.py`: imports `app.database`, `app.embeddings`, `app.models`, `scripts.chunkers`, `scripts.parse_pdf`
-- `backend/scripts/parse_pdf.py`: imports none (leaf module)
-- `backend/scripts/seed.py`: imports `app.database`, `app.models`
-- `backend/scripts/test_parse.py`: imports none (leaf module)
+- `backend/scripts/add_fts.py`: imports `alembic.command`, `alembic.config`
+- `backend/scripts/ingest.py`: imports `ingestion.cli`
+- `backend/scripts/seed.py`: imports `seeding.load_curriculum`
+- `backend/scripts/ingestion/cli.py`: imports `ingestion.pipeline`
+- `backend/scripts/ingestion/pipeline.py`: imports `app.database`, `app.embeddings`, `app.models`, `ingestion.chunking`, `ingestion.console`, `ingestion.database`, `ingestion.parsing`, `ingestion.parsing.config`, `ingestion.paths`
+- `backend/scripts/ingestion/database.py`: imports `app.database`, `app.models`
+- `backend/scripts/ingestion/paths.py`: imports none (leaf module)
+- `backend/scripts/ingestion/console.py`: imports none (leaf module)
+- `backend/scripts/ingestion/parsing/parser.py`: imports `ingestion.parsing.cache`, `ingestion.parsing.config`, `ingestion.parsing.docling_parser`, `ingestion.parsing.models`, `ingestion.parsing.pymupdf_parser`
+- `backend/scripts/ingestion/parsing/pymupdf_parser.py`: imports `ingestion.parsing.models`
+- `backend/scripts/ingestion/parsing/docling_parser.py`: imports `ingestion.parsing.cache`, `ingestion.parsing.models`
+- `backend/scripts/ingestion/parsing/cache.py`: imports `ingestion.parsing.config`, `ingestion.parsing.models`
+- `backend/scripts/ingestion/parsing/config.py`: imports `ingestion.paths`
+- `backend/scripts/ingestion/parsing/models.py`: imports none (leaf module)
+- `backend/scripts/ingestion/cleaning/instruction_plan.py`: imports `ingestion.cleaning.text`
+- `backend/scripts/ingestion/cleaning/text.py`: imports none (leaf module)
+- `backend/scripts/ingestion/chunking/chunk.py`: imports `ingestion.cleaning`
+- `backend/scripts/ingestion/chunking/syllabus.py`: imports `ingestion.cleaning`, `ingestion.chunking.chunk`
+- `backend/scripts/ingestion/chunking/instruction_plan.py`: imports `ingestion.cleaning`, `ingestion.chunking.chunk`
+- `backend/scripts/ingestion/chunking/benefits.py`: imports `ingestion.chunking.chunk`
+- `backend/scripts/seeding/load_curriculum.py`: imports `app.database`, `app.models`, `seeding.curriculum_data`, `seeding.loaders`
+- `backend/scripts/seeding/loaders.py`: imports `app.models`, `seeding.curriculum_data`
+- `backend/scripts/seeding/curriculum_data.py`: imports none (leaf module)
+- `backend/alembic/env.py`: imports `alembic`, `app.database`, `app.models`
+- `backend/alembic/versions/0001_baseline.py`: imports none (leaf module)
+- `backend/alembic/versions/0002_add_full_text_search.py`: imports `alembic`, `app.models`
+- `backend/alembic/versions/0003_page_number_nullable.py`: imports `alembic`, `sqlalchemy`
+- `backend/scripts/tools/dump_pdf_markdown.py`: imports none (leaf module)
 - `backend/tests/test_browser_automation.py`: imports `app.browser_agent`, `app.main`
 
 ---

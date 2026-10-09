@@ -173,18 +173,21 @@ uv run python scripts/ingest.py
   ```
 
 ### Step 5.3: Add Full-Text Search (FTS) Columns & GIN Indexes
-Adds generated `tsvector` columns and GIN indexes to both `course_doc_chunks` and `benefit_chunks` in Neon to enable hybrid retrieval (dense vector + lexical keyword matching):
+Adds generated `tsvector` columns and GIN indexes to both `course_doc_chunks` and `benefit_chunks` in Neon to enable hybrid retrieval (dense vector + lexical keyword matching). This is now an Alembic migration; the wrapper applies just that revision:
 
 ```bash
 uv run python scripts/add_fts.py
+# or, for all pending migrations:
+uv run alembic upgrade head
 ```
 
-*Expected output:*
+*Expected output (abridged):*
 ```text
-Adding fts to course_doc_chunks...
-Adding fts to benefit_chunks...
-Done!
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_baseline, Baseline: schema as it existed before Alembic was adopted.
+INFO  [alembic.runtime.migration] Running upgrade 0001_baseline -> 0002_add_full_text_search, Add full-text search (generated tsvector + GIN) to the chunk tables.
 ```
+
+> Existing databases were not created by Alembic. The migration chain starts with an empty `0001_baseline`, so `alembic upgrade head` is safe to run on them; no manual `alembic stamp` is required.
 
 ---
 

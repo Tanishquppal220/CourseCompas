@@ -12,7 +12,7 @@ This document provides a comprehensive technical audit of the Retrieval-Augmente
 - **Output Vector Dimension**: `384`
 - **Normalization**: `normalize_embeddings=True` (all generated vectors are $L_2$-normalized to unit sphere length)
 - **Source Reference**: `backend/app/embeddings.py` (Lines 9–10) & `backend/app/models.py` (Line 20)
-- *(Note on historical comment: `backend/scripts/ingest.py` Line 5 retains a docstring reference to `Qwen3-Embedding-0.6B`, but the active codebase strictly instantiates and executes `BAAI/bge-small-en-v1.5` across all ingestion and runtime queries).*
+- *(Note on historical comment: the old `backend/scripts/ingest.py` retained a docstring reference to `Qwen3-Embedding-0.6B`, but the active codebase strictly instantiates and executes `BAAI/bge-small-en-v1.5` across all ingestion and runtime queries. The stale comment was removed when `ingest.py` became a thin CLI over `backend/scripts/ingestion/`).*
 
 ### 1.2 pgvector Schema Setup
 Vector storage is defined across two primary chunking tables in PostgreSQL using SQLAlchemy's `Vector` type from `pgvector.sqlalchemy`:
@@ -23,24 +23,37 @@ In `backend/app/models.py`:
 ```python
 EMBEDDING_DIM = 384
 
+# Shared by both chunk tables and by the Alembic migration that adds the
+# column to existing databases.
+FTS_EXPRESSION = (
+    "to_tsvector('english', "
+    "coalesce(section_title, '') || ' ' || coalesce(content, ''))"
+)
+
 class CourseDocumentChunk(Base):
     __tablename__ = "course_doc_chunks"
     ...
     embedding = Column(Vector(EMBEDDING_DIM), nullable=False)
-    fts = Column(TSVECTOR, index=True)
+    fts = Column(TSVECTOR, Computed(FTS_EXPRESSION, persisted=True))
+    __table_args__ = (
+        Index("ix_course_doc_chunks_fts", "fts", postgresql_using="gin"),
+    )
 
 class BenefitChunk(Base):
     __tablename__ = "benefit_chunks"
     ...
     embedding = Column(Vector(EMBEDDING_DIM), nullable=False)
-    fts = Column(TSVECTOR, index=True)
+    fts = Column(TSVECTOR, Computed(FTS_EXPRESSION, persisted=True))
+    __table_args__ = (
+        Index("ix_benefit_chunks_fts", "fts", postgresql_using="gin"),
+    )
 ```
 
 ### 1.3 Indexing Strategy & DDL
 - **Index Type**: **HNSW** (Hierarchical Navigable Small World)
 - **Distance Operator**: **`vector_cosine_ops`** (calculates Cosine Distance using the `<=>` operator)
 - **Database Extension**: `CREATE EXTENSION IF NOT EXISTS vector`
-- **Index DDL** (defined in `backend/scripts/ingest.py` Lines 50–59):
+- **Index DDL** (defined in `backend/scripts/ingestion/database.py`):
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS vector;
@@ -63,7 +76,7 @@ USING hnsw (embedding vector_cosine_ops);
 CourseCompass combines dense vector semantic search with sparse lexical full-text search (FTS) using PostgreSQL's native `tsvector` engine and `websearch_to_tsquery`.
 
 ### 2.1 Full-Text Search Schema & GIN Index
-Full-text indexing is implemented as a generated stored column that concatenates `section_title` and `content`, backed by a PostgreSQL GIN index (defined in `backend/scripts/add_fts.py` Lines 9–35):
+Full-text indexing is implemented as a generated stored column that concatenates `section_title` and `content`, backed by a PostgreSQL GIN index. The expression lives once in `FTS_EXPRESSION` (`backend/app/models.py`) and is applied by the Alembic migration `backend/alembic/versions/0002_add_full_text_search.py` (via `scripts/add_fts.py` or `alembic upgrade`):
 
 ```sql
 -- Course doc chunks FTS column & GIN index
@@ -144,7 +157,7 @@ WHERE ((course_doc_chunks.embedding <=> :query_vector) < 0.6
 
 ## 3. Chunking Strategy & Taxonomy
 
-Rather than relying on arbitrary sliding token windows (e.g. `chunk_size = 500`, `chunk_overlap = 50`), CourseCompass implements **document-aware semantic and structural chunking** in `backend/scripts/chunkers.py`.
+Rather than relying on arbitrary sliding token windows (e.g. `chunk_size = 500`, `chunk_overlap = 50`), CourseCompass implements **document-aware semantic and structural chunking** in `backend/scripts/ingestion/chunking/` (one module per document type).
 
 ### 3.1 Token/Character Split Sizes & Overlap
 - **Sliding-window `chunk_size`**: **None / Not used**
@@ -153,23 +166,23 @@ Rather than relying on arbitrary sliding token windows (e.g. `chunk_size = 500`,
 
 ### 3.2 Strategy Per Document Type
 
-#### A. Syllabus PDFs (`chunk_syllabus` in `chunkers.py`)
+#### A. Syllabus PDFs (`chunk_syllabus` in `chunking/syllabus.py`)
 1. **Course Overview**: Extracts course title, course code, LTP hours (`Lecture-Tutorial-Practical`), and credit distributions.
 2. **Course Outcomes (COs)**: Parsed via regex `CO(\d+)\s*::\s*(.+?)(?=CO\d+\s*::|$)` into isolated outcome chunks (e.g., `CO1 :: explain the types of data...`).
 3. **Unit Sections**: Triggered by Roman numeral markers `Unit\s+([IVX]+)`. Topic titles and sub-bullet bodies are parsed via `TOPIC_SPLIT_RE = ^([A-Za-z0-9 ...]{2,90}?)[:：](.+)$`.
 4. **Practicals**: Extracted using regex `^\d{2}\.[^\d]` or `^•\s*\d{2}\.` into distinct lab exercise chunks.
 5. **References**: Textbooks, author names, publishers, and reference links consolidated into reference chunks.
 
-#### B. Instruction Plan (IP) PDFs (`chunk_ip` in `chunkers.py`)
+#### B. Instruction Plan (IP) PDFs (`chunk_ip` in `chunking/instruction_plan.py`)
 1. **Weightage Table**: Detects evaluation matrices (`Course Weightage: ATT: 5, CA: 25, MTT: 20, ETT: 50`) and parses them into overview chunks.
 2. **Textbook Tables**: Identifies tables with `[TR]-\d+` codes, mapping rows into structured references with author, title, and publisher metadata.
-3. **Lecture-by-Lecture Plan**: Iterates over multi-column pedagogical tables using `_classify_lecture_cells`:
+3. **Lecture-by-Lecture Plan**: Iterates over multi-column pedagogical tables using `classify_lecture_cells`:
    - Categorizes cells into `week`, `lecture`, `topic`, `refs`, `desc`, `outcomes`, and `pedagog` (pedagogical tools).
    - Reconstructs continuation rows and handles merged table cells.
    - Outputs a unified, self-contained chunk per lecture.
 4. **LTP Week Distribution**: Extracts calendar structures and spillover lecture allocations into table row chunks.
 
-#### C. Academic Benefits Markdown (`chunk_benefits` in `chunkers.py`)
+#### C. Academic Benefits Markdown (`chunk_benefits` in `chunking/benefits.py`)
 1. **Policy Overview & Eligibility**: Parses introductory text blocks and preamble definitions for each of the 8 EduRevolution benefit schemes.
 2. **Criteria Rows with Bi-Directional Cell Fill**:
    - Parses markdown table rows.

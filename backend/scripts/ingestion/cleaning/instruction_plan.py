@@ -1,8 +1,12 @@
-"""Text cleaning and boilerplate removal for CourseCompass document chunks.
-This is For Cleaning the IP Documents as it have many diffrent blank pages and cleanign the footer
+"""Instruction Plan (IP) cleaning: footer stripping and boilerplate removal.
+
+IP PDFs repeat a disclaimer and a session/page footer on every page; these
+helpers remove that noise before chunking.
 """
 
 import re
+
+from .text import collapse_whitespace, normalize_whitespace
 
 # Repeated disclaimer that appears at the bottom of every IP page.
 IP_BOILERPLATE_PHRASES = (
@@ -19,20 +23,6 @@ FOOTER_PATTERNS = (
     re.compile(r"^\s*page\s+\d+\s+of\s+\d+\s*$", re.IGNORECASE),
 )
 
-WS_RE = re.compile(r"[ \t]+")
-LINE_WS_RE = re.compile(r"\s+")
-
-
-def collapse_whitespace(text: str) -> str:
-    """Collapse runs of whitespace inside lines and strip empty inter-line space."""
-    lines = [re.sub(r"[ \t]+", " ", ln).strip() for ln in text.splitlines()]
-    return "\n".join(ln for ln in lines if ln)
-
-
-def normalize_whitespace(text: str) -> str:
-    """Collapse ALL whitespace (including newlines) into single spaces."""
-    return re.sub(r"\s+", " ", text).strip()
-
 
 def strip_footer(text: str) -> str:
     """Remove session/page-number footer lines."""
@@ -44,24 +34,13 @@ def strip_footer(text: str) -> str:
     return "\n".join(out)
 
 
-def is_boilerplate(text: str) -> bool:
-    """True if text is repeated boilerplate / junk, not useful for retrieval."""
-    lowered = normalize_whitespace(text).lower()
-    if not lowered:
-        return True
-    if lower_matches_phrase(lowered, IP_BOILERPLATE_PHRASES, min_chars=24):
-        return True
-    return bool(_looks_like_page_furniture(text))
+def lower_matches_phrase(lowered: str, phrases) -> bool:
+    """True if any phrase occurs in the already-lowercased text."""
+    return any(phrase in lowered for phrase in phrases)
 
 
-def lower_matches_phrase(lowered: str, phrases, min_chars: int = 0) -> bool:
-    for phrase in phrases:
-        if phrase in lowered:
-            return True
-    return False
-
-
-def _looks_like_page_furniture(text: str) -> bool:
+def looks_like_page_furniture(text: str) -> bool:
+    """True for footers, bare page numbers, and other page furniture."""
     stripped = normalize_whitespace(text)
     if any(p.search(text) for p in FOOTER_PATTERNS):
         return True
@@ -72,11 +51,21 @@ def _looks_like_page_furniture(text: str) -> bool:
     return bool(re.fullmatch(r"\d+", stripped))
 
 
+def is_boilerplate(text: str) -> bool:
+    """True if text is repeated boilerplate / junk, not useful for retrieval."""
+    lowered = normalize_whitespace(text).lower()
+    if not lowered:
+        return True
+    if lower_matches_phrase(lowered, IP_BOILERPLATE_PHRASES):
+        return True
+    return looks_like_page_furniture(text)
+
+
 def clean_chunk_text(text: str) -> str:
     """Normalize + strip footers for a chunk's content."""
     text = strip_footer(text)
 
-    # Remove the large instruction plan boilerplate to prevent entire blocks from being dropped
+    # Remove the large instruction-plan boilerplate so entire blocks are not dropped.
     text = re.sub(
         r"An instruction plan is only a tentative plan.*?mentioned in the instruction plan\.?",
         "",
