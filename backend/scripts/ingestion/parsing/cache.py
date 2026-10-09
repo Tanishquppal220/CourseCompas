@@ -1,8 +1,8 @@
 """On-disk cache for parsed PDFs.
 
-The cache key includes the file path, modification time, size, parser backend,
-and ``CACHE_VERSION``, so a PyMuPDF cache is never confused with a Docling
-cache, and bumping the version ignores caches written by an older parse schema.
+The cache key includes the file path, modification time, size, and
+``CACHE_VERSION``, so bumping the version ignores caches written by an older
+parse schema.
 """
 
 import hashlib
@@ -12,14 +12,14 @@ import sys
 from pathlib import Path
 
 from . import models
-from .config import CACHE_DIR, PARSER_BACKEND
+from .config import CACHE_DIR
 from .models import ParsedPdf
 
 logger = logging.getLogger(__name__)
 
 # Bump when the shape or content of ParsedPdf changes, so stale caches are
 # ignored instead of feeding the chunkers outdated data.
-CACHE_VERSION = 2
+CACHE_VERSION = 3
 
 # Failures that mean "this cache file is unusable" (corrupt, moved module, or
 # unreadable). Anything else (e.g. a bug in a dataclass) should surface instead
@@ -35,10 +35,9 @@ _CACHE_LOAD_ERRORS = (
 
 
 def cache_path_for(pdf_path: Path) -> Path:
-    """Return the cache file that belongs to ``pdf_path`` for the active backend."""
+    """Return the cache file that belongs to ``pdf_path``."""
     cache_key = (
         f"v{CACHE_VERSION}|"
-        f"{PARSER_BACKEND}|"
         f"{pdf_path}|"
         f"{pdf_path.stat().st_mtime_ns}|"
         f"{pdf_path.stat().st_size}"

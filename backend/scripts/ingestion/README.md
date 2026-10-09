@@ -40,11 +40,10 @@ Schema changes live outside this folder, in `backend/alembic/` (see
 | File | Role |
 |---|---|
 | `models.py` | `ParsedPdf`, `ParsedTable`, `cell_to_text`. |
-| `config.py` | `PARSER_BACKEND` (`pymupdf` default, or `docling`) + cache dir. |
-| `cache.py` | On-disk parse cache (keyed by path, mtime, size, backend, and `CACHE_VERSION`). |
+| `config.py` | Parse cache dir (`PDF_PARSE_CACHE_DIR`). |
+| `cache.py` | On-disk parse cache (keyed by path, mtime, size, and `CACHE_VERSION`). |
 | `pymupdf_parser.py` | PyMuPDF + pymupdf4llm backend. Table markdown is dropped from text items (tables are stored once, in `parsed.tables`). |
-| `docling_parser.py` | Docling backend (original implementation). |
-| `parser.py` | Public `batch_parse` / `parse_pdf`; dispatches to the backend. |
+| `parser.py` | Public `batch_parse` / `parse_pdf`; parses uncached PDFs with PyMuPDF. |
 
 ### `cleaning/`
 | File | Role |
@@ -55,14 +54,35 @@ Schema changes live outside this folder, in `backend/alembic/` (see
 ### `chunking/`
 | File | Role |
 |---|---|
-| `chunk.py` | `Chunk` dataclass + shared helpers (`truncate_text`, `collect_cleaned_text_items`, `assign_chunk_indices`). |
-| `syllabus.py` | `chunk_syllabus` — Syllabus PDFs. |
-| `instruction_plan.py` | `chunk_ip` — Instruction Plan PDFs. |
+| `chunk.py` | `Chunk` dataclass + shared helpers (`truncate_text`, `collect_cleaned_text_items`). `chunk_index` is owned by the pipeline, not the chunkers. |
+| `metadata.py` | Typed per-chunk metadata dataclasses (`ChunkMeta`) serialized with `.to_dict()`. |
+| `syllabus.py` | `chunk_syllabus` — Syllabus PDFs (classify-then-build: sections → builders). |
+| `instruction_plan.py` | `chunk_ip` — Instruction Plan PDFs (tables classified once into `TableKind`, then dispatched). |
 | `benefits.py` | `chunk_benefits` — `benefits_clean.md`. |
 
 `Chunk.page` is always the real source page number, or `None` when the source
 has no pages (the benefits markdown). Non-page location data (e.g. a table
 index) goes in `Chunk.metadata`, not in `page`.
+
+### `Chunk.metadata` schema
+
+| doc_type | chunk_type | metadata keys |
+|---|---|---|
+| IP | `course_overview`, `table_row` | `{}` |
+| IP | `course_outcome` | `co_num` |
+| IP | `reference` | `ref_code` |
+| IP | `lecture` | `week`, `lecture` |
+| Syllabus | `course_overview`, `references` | `{}` |
+| Syllabus | `course_outcome` (CO markers) | `co_num` |
+| Syllabus | `course_outcome` (no CO markers) | `{}` |
+| Syllabus | `practical` | `practical_no` |
+| Syllabus | `unit` | `unit`, `unit_label` |
+| Benefits | `policy_overview`, `special_note` | `section`, `table_index` |
+| Benefits | `criteria_row` | `section`, `table_index`, `fields` |
+
+`document_kind` (duplicate of `doc_type`), the benefits `type` key (duplicate
+of `chunk_type`), and the chunkers' `chunk_index` stamping were removed; the
+pipeline assigns `chunk_index` from its own enumeration of the final chunk list.
 
 ## Where things are stored
 

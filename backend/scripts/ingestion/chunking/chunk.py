@@ -4,6 +4,7 @@ import re
 from dataclasses import dataclass, field
 
 from ..cleaning import clean_chunk_text, is_boilerplate
+from .metadata import ChunkMeta
 
 # Shared document patterns (used by both the Syllabus and IP chunkers).
 COURSE_CODE_RE = re.compile(r"\b([A-Z]{3}\d{3})\b")
@@ -17,6 +18,10 @@ class Chunk:
     ``page`` is the real 1-based source page number, or ``None`` when the
     source has no pages (e.g. the benefits markdown). Any non-page location
     information (table index, section) belongs in ``metadata``.
+
+    ``metadata`` is a per-(doc_type, chunk_type) :class:`ChunkMeta` dataclass
+    (see ``metadata.py``); the pipeline serializes it with ``.to_dict()``.
+    ``chunk_index`` is owned by the pipeline, not the chunkers.
     """
 
     doc_type: str
@@ -24,7 +29,7 @@ class Chunk:
     section_title: str
     chunk_type: str
     content: str
-    metadata: dict = field(default_factory=dict)
+    metadata: ChunkMeta | None = field(default=None)
 
 
 def truncate_text(text: str, limit: int = 200) -> str:
@@ -42,10 +47,3 @@ def collect_cleaned_text_items(text_items):
         if not text or is_boilerplate(text):
             continue
         yield item.get("page", 0), text
-
-
-def assign_chunk_indices(chunks: list[Chunk]) -> list[Chunk]:
-    """Stamp each chunk's ``chunk_index`` metadata with its position."""
-    for i, chunk in enumerate(chunks):
-        chunk.metadata["chunk_index"] = i
-    return chunks

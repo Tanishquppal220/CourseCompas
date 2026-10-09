@@ -13,11 +13,9 @@ already exist is skipped, so re-runs only reprocess what is missing. Within a
 run each document is idempotent (delete-then-insert). Use ``--force-rebuild``
 to recompute everything from scratch.
 
-Docling parsing is CPU-bound per page and (measured on this machine) cannot be
-sped up with Docling's threaded options. Use ``--workers N`` to run N
-independent processes, each handling its own share of files. Each worker loads
-its own models, so watch RAM: ~3GB per worker for Docling plus ~3GB for the
-embedder.
+Parsing is CPU-bound per page. Use ``--workers N`` to run N independent
+processes, each handling its own share of files. Each worker loads its own
+copy of the embedding model, so watch RAM when raising ``--workers``.
 """
 
 import logging
@@ -32,11 +30,10 @@ from app.database import SessionLocal, engine
 from app.embeddings import embed_texts
 from app.models import BenefitChunk, CourseDocumentChunk
 
-from .chunking import assign_chunk_indices, chunk_benefits, chunk_ip, chunk_syllabus
+from .chunking import chunk_benefits, chunk_ip, chunk_syllabus
 from .console import log
 from .database import HNSW_INDEX_SQL, create_hnsw_indexes, ensure_tables
 from .parsing import batch_parse
-from .parsing.config import PARSER_BACKEND
 from .paths import BENEFITS_MD, IP_DIR, SYLLABUS_DIR
 
 logger = logging.getLogger(__name__)
@@ -83,7 +80,7 @@ def ingest_course_docs(db, tasks: list, continue_on_error: bool = False) -> int:
         return 0
 
     paths = sorted({t[3] for t in tasks})
-    log(f"  parsing {len(paths)} uncached PDFs ({PARSER_BACKEND})")
+    log(f"  parsing {len(paths)} uncached PDFs")
     parsed_map = {
         p: parsed for p, parsed in batch_parse(paths, use_cache=True, verbose=True)
     }
@@ -101,7 +98,7 @@ def ingest_course_docs(db, tasks: list, continue_on_error: bool = False) -> int:
                 if not continue_on_error:
                     raise RuntimeError(f"Failed to parse {pdf}")
                 continue
-            chunks = assign_chunk_indices(chunk_parsed_document(parsed, doc_type))
+            chunks = chunk_parsed_document(parsed, doc_type)
             if not chunks:
                 log(f"  {code} {doc_type}: no chunks, skipped")
                 continue
@@ -116,13 +113,13 @@ def ingest_course_docs(db, tasks: list, continue_on_error: bool = False) -> int:
                     "doc_type": doc_type,
                     "section_title": c.section_title,
                     "page_number": c.page,
-                    "chunk_index": c.metadata.get("chunk_index", 0),
+                    "chunk_index": i,
                     "chunk_type": c.chunk_type,
                     "content": c.content,
-                    "metadata": c.metadata,
+                    "metadata": c.metadata.to_dict() if c.metadata else {},
                     "embedding": vec,
                 }
-                for c, vec in zip(chunks, embeddings)
+                for i, (c, vec) in enumerate(zip(chunks, embeddings))
             ]
 
             db.query(CourseDocumentChunk).filter_by(
@@ -189,13 +186,13 @@ def ingest_benefits(db, force_rebuild: bool, continue_on_error: bool = False) ->
             "document_name": "Academic Benefits.pdf",
             "section_title": c.section_title,
             "page_number": c.page,
-            "chunk_index": c.metadata.get("chunk_index", 0),
+            "chunk_index": i,
             "chunk_type": c.chunk_type,
             "content": c.content,
-            "metadata": c.metadata,
+            "metadata": c.metadata.to_dict() if c.metadata else {},
             "embedding": vec,
         }
-        for c, vec in zip(chunks, embeddings)
+        for i, (c, vec) in enumerate(zip(chunks, embeddings))
     ]
     db.query(BenefitChunk).delete()
     try:

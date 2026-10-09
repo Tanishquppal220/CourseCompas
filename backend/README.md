@@ -32,7 +32,7 @@ backend/
 │   │   ├── pipeline.py  # orchestration (what runs when)
 │   │   ├── cli.py       # argument parsing
 │   │   ├── database.py  # tables + HNSW vector indexes
-│   │   ├── parsing/     # PDF -> ParsedPdf (PyMuPDF / Docling backends)
+│   │   ├── parsing/     # PDF -> ParsedPdf (PyMuPDF backend)
 │   │   ├── cleaning/    # whitespace + IP boilerplate/footer removal
 │   │   └── chunking/    # chunkers, one module per document type
 │   ├── seeding/         # curriculum data + loaders + seed routine

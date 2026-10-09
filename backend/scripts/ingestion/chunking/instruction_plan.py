@@ -3,9 +3,14 @@
 IP PDFs are 20+ page lecture-by-lecture tables. This module reconstructs
 per-lecture chunks from the tables plus course overview, outcomes,
 textbook/reference, and schedule chunks.
+
+Tables are classified **once** into a typed kind (``TableKind``) by
+:func:`classify_tables`; the chunk-building passes then dispatch on those kinds
+instead of re-scanning every table's cells for each pattern.
 """
 
 import re
+from dataclasses import dataclass, field
 
 from ..cleaning import clean_chunk_text, normalize_whitespace
 from .chunk import (
@@ -15,6 +20,13 @@ from .chunk import (
     collect_cleaned_text_items,
     truncate_text,
 )
+from .metadata import (
+    IpCourseOutcomeMeta,
+    IpCourseOverviewMeta,
+    IpLectureMeta,
+    IpReferenceMeta,
+    IpTableRowMeta,
+)
 
 WEEK_RE = re.compile(r"\bWeek\s*(\d+)", re.IGNORECASE)
 LECTURE_RE = re.compile(r"\bLecture\s*(\d+)", re.IGNORECASE)
@@ -23,27 +35,107 @@ SINGLE_LABEL_RE = re.compile(r"^(Week|Lecture)$", re.IGNORECASE)
 SPILL_WORDS = {"spill", "spill over", "over"}
 
 
+class TableKind:
+    """The semantic kind a single IP table is classified as."""
+
+    OVERVIEW = "overview"
+    BOOKS = "books"
+    LECTURE = "lecture"
+    SCHEDULE = "schedule"
+    OTHER = "other"
+
+
+@dataclass
+class TableClaims:
+    """The kinds each table was claimed by, in one classification pass."""
+
+    kinds: list[set[str]] = field(default_factory=list)
+
+    def has(self, index: int, kind: str) -> bool:
+        return kind in self.kinds[index]
+
+
+def join_table(table) -> str:
+    """Serialize one table's cells into the string pattern checks run on."""
+    return " ".join(" ".join(r) for r in table.rows)
+
+
+def classify_tables(tables) -> TableClaims:
+    """Classify every IP table once into its typed kind(s).
+
+    Mirrors the historical claim order (overview-first-wins, then books,
+    then lecture, then schedule) so a table still belongs to at most the same
+    kinds it would have been consumed by in the old four-pass loop.
+    """
+    joineds = [join_table(table) for table in tables]
+    kinds: list[set[str]] = [set() for _ in tables]
+
+    # Course overview: only the first table with code + weightage.
+    for ti, joined in enumerate(joineds):
+        if "Course Weightage" in joined and COURSE_CODE_RE.search(joined):
+            kinds[ti].add(TableKind.OVERVIEW)
+            break
+
+    # Textbook / reference tables.
+    for ti, joined in enumerate(joineds):
+        if _is_book_table(joined):
+            kinds[ti].add(TableKind.BOOKS)
+
+    # Lecture-plan tables (skip tables already claimed above).
+    claimed = {ti for ti, ks in enumerate(kinds) if ks}
+    for ti, joined in enumerate(joineds):
+        if ti in claimed:
+            continue
+        if WEEK_RE.search(joined) or LECTURE_RE.search(joined):
+            kinds[ti].add(TableKind.LECTURE)
+
+    # Schedule / distribution tables (LTP weeks), still unclaimed.
+    claimed = {ti for ti, ks in enumerate(kinds) if ks}
+    for ti, joined in enumerate(joineds):
+        if ti in claimed:
+            continue
+        if "week" in joined.lower() and "mte" in joined.lower():
+            kinds[ti].add(TableKind.SCHEDULE)
+
+    return TableClaims(kinds=kinds)
+
+
+def _is_book_table(joined: str) -> bool:
+    """True if a joined table looks like a textbook/reference table."""
+    lower_joined = joined.lower()
+    has_book_code = bool(re.search(r"\b[TR]\s?-\s?\d+\b", joined))
+    return (
+        "textbook" in lower_joined
+        or "reference books" in lower_joined
+        or (
+            has_book_code
+            and " by " in lower_joined
+            and not WEEK_RE.search(joined)
+            and not LECTURE_RE.search(joined)
+        )
+    )
+
+
 def chunk_ip(text_items, tables) -> list[Chunk]:
     """Chunk a parsed Instruction Plan into lecture/reference/overview chunks."""
     chunks: list[Chunk] = []
-    handled_tables = set()
+    claims = classify_tables(tables)
 
     # ---- Course overview table: the one with course code + weightage ----
     for ti, table in enumerate(tables):
-        joined = " ".join(" ".join(r) for r in table.rows)
-        if "Course Weightage" in joined and COURSE_CODE_RE.search(joined):
-            handled_tables.add(ti)
-            chunks.append(
-                Chunk(
-                    doc_type="IP",
-                    page=table.page,
-                    section_title="Course Overview",
-                    chunk_type="course_overview",
-                    content=overview_from_course_table(table),
-                    metadata={"document_kind": "ip"},
-                )
+        if not claims.has(ti, TableKind.OVERVIEW):
+            continue
+        chunks.append(
+            Chunk(
+                doc_type="IP",
+                page=table.page,
+                section_title="Course Overview",
+                chunk_type="course_overview",
+                content=overview_from_course_table(table),
+                metadata=IpCourseOverviewMeta(),
             )
-            break
+        )
+        break
 
     # ---- Course outcomes from text items ----
     for page, text in collect_cleaned_text_items(text_items):
@@ -57,52 +149,35 @@ def chunk_ip(text_items, tables) -> list[Chunk]:
                     section_title="Course Outcomes",
                     chunk_type="course_outcome",
                     content=f"CO{co_num} :: {normalize_whitespace(m.group(2))}",
-                    metadata={"document_kind": "ip", "co_num": co_num},
+                    metadata=IpCourseOutcomeMeta(co_num=co_num),
                 )
             )
 
     # ---- Textbook / Reference tables ----
     for ti, table in enumerate(tables):
-        joined = " ".join(" ".join(r) for r in table.rows)
-        lower_joined = joined.lower()
-        has_book_code = bool(re.search(r"\b[TR]\s?-\s?\d+\b", joined))
-        is_book_table = (
-            "textbook" in lower_joined
-            or "reference books" in lower_joined
-            or (
-                has_book_code
-                and " by " in lower_joined
-                and not WEEK_RE.search(joined)
-                and not LECTURE_RE.search(joined)
-            )
-        )
-        if is_book_table:
-            handled_tables.add(ti)
-            for pg, row in iter_book_rows(table):
-                code, title, author, publisher = row
-                section_title = f"{code} {title}"
-                chunks.append(
-                    Chunk(
-                        doc_type="IP",
-                        page=pg,
-                        section_title=truncate_text(section_title, 120),
-                        chunk_type="reference",
-                        content=f"{code}: {title} by {author}, {publisher}".strip().rstrip(
-                            ","
-                        ),
-                        metadata={"document_kind": "ip", "ref_code": code},
-                    )
+        if not claims.has(ti, TableKind.BOOKS):
+            continue
+        for pg, row in iter_book_rows(table):
+            code, title, author, publisher = row
+            section_title = f"{code} {title}"
+            chunks.append(
+                Chunk(
+                    doc_type="IP",
+                    page=pg,
+                    section_title=truncate_text(section_title, 120),
+                    chunk_type="reference",
+                    content=f"{code}: {title} by {author}, {publisher}".strip().rstrip(
+                        ","
+                    ),
+                    metadata=IpReferenceMeta(ref_code=code),
                 )
+            )
 
     # ---- Lecture-plan tables ----
     carried_week = None
     for ti, table in enumerate(tables):
-        if ti in handled_tables:
+        if not claims.has(ti, TableKind.LECTURE):
             continue
-        joined = " ".join(" ".join(r) for r in table.rows)
-        if not (WEEK_RE.search(joined) or LECTURE_RE.search(joined)):
-            continue
-        handled_tables.add(ti)
 
         current: dict | None = None
         for row in table.rows:
@@ -142,22 +217,19 @@ def chunk_ip(text_items, tables) -> list[Chunk]:
 
     # ---- Schedule / distribution tables (LTP weeks) ----
     for ti, table in enumerate(tables):
-        if ti in handled_tables:
+        if not claims.has(ti, TableKind.SCHEDULE):
             continue
-        joined = " ".join(" ".join(r) for r in table.rows)
-        if "week" in joined.lower() and "mte" in joined.lower():
-            handled_tables.add(ti)
-            row_text = "; ".join(" | ".join(r) for r in table.rows if any(r))
-            chunks.append(
-                Chunk(
-                    doc_type="IP",
-                    page=table.page,
-                    section_title="LTP Week Distribution",
-                    chunk_type="table_row",
-                    content=row_text,
-                    metadata={"document_kind": "ip"},
-                )
+        row_text = "; ".join(" | ".join(r) for r in table.rows if any(r))
+        chunks.append(
+            Chunk(
+                doc_type="IP",
+                page=table.page,
+                section_title="LTP Week Distribution",
+                chunk_type="table_row",
+                content=row_text,
+                metadata=IpTableRowMeta(),
             )
+        )
 
     chunks.sort(key=lambda c: (c.page == 0, c.page, c.chunk_type != "course_overview"))
     return chunks
@@ -301,11 +373,7 @@ def append_lecture_chunk(chunks: list[Chunk], row: dict) -> None:
             section_title=section_title,
             chunk_type="lecture",
             content=content,
-            metadata={
-                "document_kind": "ip",
-                "week": row.get("week"),
-                "lecture": row["lecture"],
-            },
+            metadata=IpLectureMeta(week=row.get("week"), lecture=row["lecture"]),
         )
     )
 

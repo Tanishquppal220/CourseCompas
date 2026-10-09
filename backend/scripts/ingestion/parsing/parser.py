@@ -1,7 +1,7 @@
 """Public PDF parsing entrypoints.
 
 ``batch_parse`` is the one the pipeline calls; it checks the on-disk cache and
-then dispatches to the PyMuPDF or Docling backend based on ``PARSER_BACKEND``.
+then parses uncached PDFs with the PyMuPDF backend.
 """
 
 import time
@@ -9,8 +9,6 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from .cache import load_cached, save_parsed_cache
-from .config import PARSER_BACKEND
-from .docling_parser import parse_pdfs_with_docling
 from .models import ParsedPdf
 from .pymupdf_parser import parse_pdf_with_pymupdf
 
@@ -54,47 +52,32 @@ def batch_parse(
         return results
 
     # -----------------------------------------------------------------
-    # PYMuPDF
+    # PARSE (PyMuPDF)
     # -----------------------------------------------------------------
-    if PARSER_BACKEND == "pymupdf":
-        started = time.time()
+    started = time.time()
 
-        for index, pdf_path in enumerate(pending, start=1):
-            try:
-                parsed = parse_pdf_with_pymupdf(pdf_path)
+    for index, pdf_path in enumerate(pending, start=1):
+        try:
+            parsed = parse_pdf_with_pymupdf(pdf_path)
 
-                save_parsed_cache(pdf_path, parsed)
+            save_parsed_cache(pdf_path, parsed)
 
-                results.append((pdf_path, parsed))
+            results.append((pdf_path, parsed))
 
-                if verbose:
-                    elapsed = time.time() - started
+            if verbose:
+                elapsed = time.time() - started
 
-                    print(
-                        f"[parse:pymupdf] {pdf_path.name} "
-                        f"({index}/{len(pending)}) "
-                        f"t+{elapsed:.1f}s",
-                        flush=True,
-                    )
-
-            except Exception as exc:  # noqa: BLE001
                 print(
-                    f"[parse:pymupdf] FAILED {pdf_path.name}: {exc}",
+                    f"[parse:pymupdf] {pdf_path.name} "
+                    f"({index}/{len(pending)}) "
+                    f"t+{elapsed:.1f}s",
                     flush=True,
                 )
 
-        return results
+        except Exception as exc:  # noqa: BLE001
+            print(
+                f"[parse:pymupdf] FAILED {pdf_path.name}: {exc}",
+                flush=True,
+            )
 
-    # -----------------------------------------------------------------
-    # DOCLING
-    # -----------------------------------------------------------------
-    if PARSER_BACKEND == "docling":
-        if verbose:
-            print(f"[parse] using Docling for {len(pending)} PDFs", flush=True)
-
-        results.extend(parse_pdfs_with_docling(pending, verbose=verbose))
-
-        return results
-
-    # Should never happen because config validates PARSER_BACKEND at import.
-    raise RuntimeError(f"Unsupported parser backend: {PARSER_BACKEND}")
+    return results

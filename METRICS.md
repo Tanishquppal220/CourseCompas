@@ -25,7 +25,6 @@ This document provides a factual, evidence-backed audit of the **CourseCompass**
 | `pypdf` | `>=5.0.0` | PDF reading and text extraction |
 | `pdfplumber` | `>=0.11.10` | Detailed PDF text and table extraction |
 | `pandas` | `>=3.0.5` | Data analysis and tabular manipulation |
-| `docling` | `>=2.0.0` | Document parsing, OCR, and layout analysis pipeline |
 | `sentence-transformers` | `>=6.0.1` | Local sentence embeddings and cross-encoder rerankers |
 | `python-dotenv` | `>=1.2.3` | Environment variable file (.env) loading |
 | `langchain` | `>=1.3.18` | LLM application orchestration framework |
@@ -139,8 +138,6 @@ This document provides a factual, evidence-backed audit of the **CourseCompass**
 
 #### Non-Training / Operational Batch Sizes Present
 - **Embedding Inference Batch Size**: `BATCH_SIZE = 64` (defined in `backend/app/embeddings.py` Line 11 for batch encoding text chunks).
-- **PDF Layout Extraction Batch Size**: `layout_batch_size = 2` (defined in `backend/scripts/ingestion/parsing/docling_parser.py` Line 26 for Docling pipeline options).
-- **PDF Table Extraction Batch Size**: `table_batch_size = 2` (defined in `backend/scripts/ingestion/parsing/docling_parser.py` Line 27 for Docling pipeline options).
 
 ---
 
@@ -203,22 +200,22 @@ This document provides a factual, evidence-backed audit of the **CourseCompass**
 - `backend/scripts/ingest.py`: imports `ingestion.cli`
 - `backend/scripts/seed.py`: imports `seeding.load_curriculum`
 - `backend/scripts/ingestion/cli.py`: imports `ingestion.pipeline`
-- `backend/scripts/ingestion/pipeline.py`: imports `app.database`, `app.embeddings`, `app.models`, `ingestion.chunking`, `ingestion.console`, `ingestion.database`, `ingestion.parsing`, `ingestion.parsing.config`, `ingestion.paths`
+- `backend/scripts/ingestion/pipeline.py`: imports `app.database`, `app.embeddings`, `app.models`, `ingestion.chunking`, `ingestion.console`, `ingestion.database`, `ingestion.parsing`, `ingestion.paths`
 - `backend/scripts/ingestion/database.py`: imports `app.database`, `app.models`
 - `backend/scripts/ingestion/paths.py`: imports none (leaf module)
 - `backend/scripts/ingestion/console.py`: imports none (leaf module)
-- `backend/scripts/ingestion/parsing/parser.py`: imports `ingestion.parsing.cache`, `ingestion.parsing.config`, `ingestion.parsing.docling_parser`, `ingestion.parsing.models`, `ingestion.parsing.pymupdf_parser`
+- `backend/scripts/ingestion/parsing/parser.py`: imports `ingestion.parsing.cache`, `ingestion.parsing.config`, `ingestion.parsing.models`, `ingestion.parsing.pymupdf_parser`
 - `backend/scripts/ingestion/parsing/pymupdf_parser.py`: imports `ingestion.parsing.models`
-- `backend/scripts/ingestion/parsing/docling_parser.py`: imports `ingestion.parsing.cache`, `ingestion.parsing.models`
 - `backend/scripts/ingestion/parsing/cache.py`: imports `ingestion.parsing.config`, `ingestion.parsing.models`
 - `backend/scripts/ingestion/parsing/config.py`: imports `ingestion.paths`
 - `backend/scripts/ingestion/parsing/models.py`: imports none (leaf module)
 - `backend/scripts/ingestion/cleaning/instruction_plan.py`: imports `ingestion.cleaning.text`
 - `backend/scripts/ingestion/cleaning/text.py`: imports none (leaf module)
-- `backend/scripts/ingestion/chunking/chunk.py`: imports `ingestion.cleaning`
-- `backend/scripts/ingestion/chunking/syllabus.py`: imports `ingestion.cleaning`, `ingestion.chunking.chunk`
-- `backend/scripts/ingestion/chunking/instruction_plan.py`: imports `ingestion.cleaning`, `ingestion.chunking.chunk`
-- `backend/scripts/ingestion/chunking/benefits.py`: imports `ingestion.chunking.chunk`
+- `backend/scripts/ingestion/chunking/chunk.py`: imports `ingestion.cleaning`, `ingestion.chunking.metadata`
+- `backend/scripts/ingestion/chunking/metadata.py`: imports none (leaf module)
+- `backend/scripts/ingestion/chunking/syllabus.py`: imports `ingestion.cleaning`, `ingestion.chunking.chunk`, `ingestion.chunking.metadata`
+- `backend/scripts/ingestion/chunking/instruction_plan.py`: imports `ingestion.cleaning`, `ingestion.chunking.chunk`, `ingestion.chunking.metadata`
+- `backend/scripts/ingestion/chunking/benefits.py`: imports `ingestion.chunking.chunk`, `ingestion.chunking.metadata`
 - `backend/scripts/seeding/load_curriculum.py`: imports `app.database`, `app.models`, `seeding.curriculum_data`, `seeding.loaders`
 - `backend/scripts/seeding/loaders.py`: imports `app.models`, `seeding.curriculum_data`
 - `backend/scripts/seeding/curriculum_data.py`: imports none (leaf module)

@@ -5,7 +5,12 @@ Produces policy-overview, criteria-row, and special-note chunks.
 
 from pathlib import Path
 
-from .chunk import Chunk, assign_chunk_indices
+from .chunk import Chunk
+from .metadata import (
+    BenefitsCriteriaRowMeta,
+    BenefitsPolicyOverviewMeta,
+    BenefitsSpecialNoteMeta,
+)
 
 SECTION_BLOCK_WORDS = {
     "category",
@@ -72,11 +77,10 @@ def chunk_benefits(md_path: Path) -> list[Chunk]:
                     content=f"Section: {current_section}\n"
                     f"Type: Policy Overview & Eligibility Rules\n"
                     f"Details: {description_text}",
-                    metadata={
-                        "section": current_section,
-                        "table_index": table_index,
-                        "type": "policy_overview",
-                    },
+                    metadata=BenefitsPolicyOverviewMeta(
+                        section=current_section,
+                        table_index=table_index,
+                    ),
                 )
             )
 
@@ -148,11 +152,11 @@ def chunk_benefits(md_path: Path) -> list[Chunk]:
                         section_title=current_section,
                         chunk_type="criteria_row",
                         content="\n".join(context_lines),
-                        metadata={
-                            "section": current_section,
-                            "table_index": table_index,
-                            "fields": row_dict,
-                        },
+                        metadata=BenefitsCriteriaRowMeta(
+                            section=current_section,
+                            table_index=table_index,
+                            fields=row_dict,
+                        ),
                     )
                 )
 
@@ -165,12 +169,11 @@ def chunk_benefits(md_path: Path) -> list[Chunk]:
                     section_title=current_section,
                     chunk_type="special_note",
                     content=f"Section: {current_section}\nSpecial Policy Note: {note}",
-                    metadata={
-                        "section": current_section,
-                        "table_index": table_index,
-                        "type": "special_policy_note",
-                    },
+                    metadata=BenefitsSpecialNoteMeta(
+                        section=current_section,
+                        table_index=table_index,
+                    ),
                 )
             )
 
-    return assign_chunk_indices(chunks)
+    return chunks

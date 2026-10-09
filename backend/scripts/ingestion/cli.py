@@ -30,9 +30,9 @@ def build_argument_parser() -> argparse.ArgumentParser:
         "--workers",
         type=int,
         default=1,
-        help="processes to run parsing/embedding in (default 1; each uses "
-        "~3GB RAM plus ~3GB for the embedder, so use 2 only on machines "
-        "with plenty of free memory)",
+        help="processes to run parsing/embedding in (default 1; each worker "
+        "loads its own copy of the embedding model, so use more than 1 only "
+        "on machines with plenty of free memory)",
     )
     parser.add_argument(
         "--continue-on-error",

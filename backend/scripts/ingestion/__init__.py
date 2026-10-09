@@ -5,7 +5,7 @@ Read a run from top to bottom:
     cli.py            -> parse command-line flags
     pipeline.py       -> ORCHESTRATION: parse -> chunk -> embed -> store
     database.py       -> tables + HNSW vector indexes
-    parsing/          -> PDF -> ParsedPdf (PyMuPDF or Docling backend)
+    parsing/          -> PDF -> ParsedPdf (PyMuPDF backend)
     cleaning/         -> whitespace + IP boilerplate/footer removal
     chunking/         -> ParsedPdf -> Chunk (one module per document type)
 

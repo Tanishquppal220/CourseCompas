@@ -249,7 +249,7 @@ Only chunks satisfying either $(\text{CosineDistance} < 0.6)$ or $(\text{fts @@ 
 ## 7. Document Ingestion & Parsing Subsystem
 
 Located in `backend/scripts/` (thin CLI entrypoints) and `backend/scripts/ingestion/` (implementation):
-- `ingestion/parsing/`: PDF layout extraction supporting both **PyMuPDF** (`pymupdf4llm` with layout analysis) and **Docling**, selected by `PARSER_BACKEND`. `cache.py` handles process caching in `.cache/` for lightning-fast repeat runs.
+- `ingestion/parsing/`: PDF layout extraction with **PyMuPDF** (`pymupdf4llm` with layout analysis). `cache.py` handles process caching in `.cache/` for lightning-fast repeat runs.
 - `ingestion/chunking/`: Domain-specific chunking logic, one module per source type:
   - `syllabus.py` (`chunk_syllabus`): Parses course overview, units, topics, course outcomes (`CO1`..`CO6`), textbooks, reference books, and lab practicals.
   - `instruction_plan.py` (`chunk_ip`): Parses complex 20+ page instruction plan tables into per-lecture units with associated pedagogical tools, outcomes, and reading references.

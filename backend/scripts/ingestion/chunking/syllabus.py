@@ -2,17 +2,30 @@
 
 Turns a syllabus into course-overview, course-outcome, practical, reference,
 and per-unit topic chunks.
+
+Two phases: :func:`classify_syllabus` first sorts every text item into typed
+sections (overview / outcomes / practicals / references / units), then small
+builders (:func:`build_overview_chunk`, :func:`build_outcome_chunks`, ...)
+emit the chunks from those sections.
 """
 
 import re
+from dataclasses import dataclass, field
 
 from ..cleaning import normalize_whitespace
 from .chunk import (
     CO_RE,
     Chunk,
-    assign_chunk_indices,
     collect_cleaned_text_items,
     truncate_text,
+)
+from .metadata import (
+    SyllabusCourseOutcomeMeta,
+    SyllabusCourseOverviewMeta,
+    SyllabusOutcomeBlobMeta,
+    SyllabusPracticalMeta,
+    SyllabusReferencesMeta,
+    SyllabusUnitMeta,
 )
 
 UNIT_MARKER_RE = re.compile(r"^Unit\s+([IVX]+)$")
@@ -35,40 +48,79 @@ ROMAN = {
 }
 
 
+@dataclass
+class SyllabusSections:
+    """The typed sections a syllabus is classified into before chunking."""
+
+    overview: list = field(default_factory=list)  # (page, text)
+    outcomes: list = field(default_factory=list)  # (page, text)
+    practicals: list = field(default_factory=list)  # (page, text)
+    references: list = field(default_factory=list)  # (page, text)
+    # unit_no -> [(page, text)] in first-appearance order.
+    units: dict = field(default_factory=dict)
+
+
 def chunk_syllabus(text_items) -> list[Chunk]:
     """Chunk a parsed Syllabus PDF into semantic pieces."""
+    sections = classify_syllabus(text_items)
+
     chunks: list[Chunk] = []
+
+    # Construction order matters: the final sort is stable and does not
+    # distinguish unit/overview/practical/reference chunks (only course
+    # outcomes sort ahead of everything else). Emit in the same order the
+    # original state machine did: units first, then overview, outcomes,
+    # practicals, references.
+    chunks.extend(build_unit_chunks(sections))
+
+    overview = build_overview_chunk(sections)
+    if overview is not None:
+        chunks.append(overview)
+
+    chunks.extend(build_outcome_chunks(sections))
+    chunks.extend(build_practical_chunks(sections))
+
+    references = build_reference_chunk(sections)
+    if references is not None:
+        chunks.append(references)
+
+    chunks.sort(
+        key=lambda c: (c.page if c.page is not None else 0, c.chunk_type != "course_outcome")
+    )
+    return chunks
+
+
+def classify_syllabus(text_items) -> SyllabusSections:
+    """Sort every text item into its section, preserving per-section order."""
+    sections = SyllabusSections()
     current_unit: int | None = None
-    unit_buf: list[tuple] = []  # (page, topic_title, content)
-    outcomes_buf: list[tuple] = []  # (page, text)
-    practicals: list[tuple] = []  # (page, text)
-    ref_items: list[tuple] = []  # (page, text)
+    unit_buf: list = []  # (page, text) pending for the current unit
     in_refs = False
-    overview_parts: list[tuple] = []
 
     for page, text in collect_cleaned_text_items(text_items):
         lowered = text.lower()
 
+        # Once references start, everything after belongs to them (sticky).
         if in_refs:
-            ref_items.append((page, text))
+            sections.references.append((page, text))
             continue
 
         # LTP line.
         if re.search(r"\bCredits\b", text) and re.search(r"\bL\s*:", text):
-            overview_parts.append((page, "LTP", text))
+            sections.overview.append((page, text))
             continue
 
-        # Unit markers flip state and flush the previous unit's topic chunks.
+        # Unit markers flip state and flush the previous unit's topic lines.
         m = UNIT_MARKER_RE.match(text)
         if m:
-            flush_unit_chunks(chunks, current_unit, unit_buf)
+            store_unit(sections, current_unit, unit_buf)
             current_unit = ROMAN.get(m.group(1), None)
             unit_buf = []
             continue
 
         # Practicals: "01. Write a program ..."
         if PRACTICAL_RE.match(text) or re.match(r"^•\s*\d{2}\.", text):
-            practicals.append((page, text))
+            sections.practicals.append((page, text))
             continue
         if "list of practical" in lowered:
             continue
@@ -79,12 +131,12 @@ def chunk_syllabus(text_items) -> list[Chunk]:
             or "text books:" in text[:40].lower()
         ):
             in_refs = True
-            ref_items.append((page, text))
+            sections.references.append((page, text))
             continue
 
         # Course outcomes block.
         if "course outcomes" in lowered[:40] or re.search(r"CO\d+\s*::", text):
-            outcomes_buf.append((page, text))
+            sections.outcomes.append((page, text))
             continue
 
         # Regular content associates with the current unit, if any.
@@ -93,31 +145,43 @@ def chunk_syllabus(text_items) -> list[Chunk]:
         else:
             # Content before any unit marker (intro blurb).
             if "course outcomes" in lowered or "through this course" in lowered:
-                outcomes_buf.append((page, text))
+                sections.outcomes.append((page, text))
             else:
-                overview_parts.append((page, "Overview", text))
+                sections.overview.append((page, text))
 
-    flush_unit_chunks(chunks, current_unit, unit_buf)
+    store_unit(sections, current_unit, unit_buf)
+    return sections
 
-    # Course overview chunk.
-    if overview_parts:
-        content_parts = []
-        for _pg, _label, text in overview_parts:
-            content_parts.extend([text])
-        chunks.append(
-            Chunk(
-                doc_type="Syllabus",
-                page=overview_parts[0][0],
-                section_title="Course Overview",
-                chunk_type="course_overview",
-                content="\n".join(content_parts),
-                metadata={"document_kind": "syllabus"},
-            )
-        )
 
-    # Course outcomes chunks.
-    outcomes_page = outcomes_buf[0][0] if outcomes_buf else None
-    co_buf = "\n".join(text for _page, text in outcomes_buf)
+def store_unit(sections: SyllabusSections, unit_num: int | None, unit_buf: list) -> None:
+    """Fold a finished unit buffer into ``sections.units`` (in first-seen order)."""
+    if unit_num is not None and unit_buf:
+        sections.units.setdefault(unit_num, []).extend(unit_buf)
+
+
+def build_overview_chunk(sections: SyllabusSections) -> Chunk | None:
+    """Emit the course-overview chunk from the pre-unit blurb + LTP line."""
+    if not sections.overview:
+        return None
+    content_parts = [text for _page, text in sections.overview]
+    return Chunk(
+        doc_type="Syllabus",
+        page=sections.overview[0][0],
+        section_title="Course Overview",
+        chunk_type="course_overview",
+        content="\n".join(content_parts),
+        metadata=SyllabusCourseOverviewMeta(),
+    )
+
+
+def build_outcome_chunks(sections: SyllabusSections) -> list[Chunk]:
+    """Emit one chunk per course outcome (or one blob when no CO markers)."""
+    if not sections.outcomes:
+        return []
+
+    chunks: list[Chunk] = []
+    outcomes_page = sections.outcomes[0][0]
+    co_buf = "\n".join(text for _page, text in sections.outcomes)
     co_buf = re.sub(
         r"\s*Through this course students should be able to\s*$",
         "",
@@ -125,36 +189,43 @@ def chunk_syllabus(text_items) -> list[Chunk]:
         flags=re.IGNORECASE,
     )
     co_buf = re.sub(r"^Course Outcomes\s*:", "", co_buf, flags=re.IGNORECASE).strip()
-    if co_buf:
-        matched = list(CO_RE.finditer(co_buf))
-        if matched:
-            for m in matched:
-                co_num = int(m.group(1))
-                content = f"CO{co_num} :: {normalize_whitespace(m.group(2))}"
-                chunks.append(
-                    Chunk(
-                        doc_type="Syllabus",
-                        page=outcomes_page,
-                        section_title="Course Outcomes",
-                        chunk_type="course_outcome",
-                        content=content,
-                        metadata={"document_kind": "syllabus", "co_num": co_num},
-                    )
-                )
-        else:
+
+    if not co_buf:
+        return chunks
+
+    matched = list(CO_RE.finditer(co_buf))
+    if matched:
+        for m in matched:
+            co_num = int(m.group(1))
+            content = f"CO{co_num} :: {normalize_whitespace(m.group(2))}"
             chunks.append(
                 Chunk(
                     doc_type="Syllabus",
                     page=outcomes_page,
                     section_title="Course Outcomes",
                     chunk_type="course_outcome",
-                    content=f"Course Outcomes\n{co_buf}",
-                    metadata={"document_kind": "syllabus"},
+                    content=content,
+                    metadata=SyllabusCourseOutcomeMeta(co_num=co_num),
                 )
             )
+    else:
+        chunks.append(
+            Chunk(
+                doc_type="Syllabus",
+                page=outcomes_page,
+                section_title="Course Outcomes",
+                chunk_type="course_outcome",
+                content=f"Course Outcomes\n{co_buf}",
+                metadata=SyllabusOutcomeBlobMeta(),
+            )
+        )
+    return chunks
 
-    # Practical chunks.
-    for idx, (page, text) in enumerate(practicals, start=1):
+
+def build_practical_chunks(sections: SyllabusSections) -> list[Chunk]:
+    """Emit one chunk per practical, numbered in reading order."""
+    chunks: list[Chunk] = []
+    for idx, (page, text) in enumerate(sections.practicals, start=1):
         chunks.append(
             Chunk(
                 doc_type="Syllabus",
@@ -162,28 +233,33 @@ def chunk_syllabus(text_items) -> list[Chunk]:
                 section_title="List of Practicals",
                 chunk_type="practical",
                 content=text,
-                metadata={"document_kind": "syllabus", "practical_no": idx},
+                metadata=SyllabusPracticalMeta(practical_no=idx),
             )
         )
+    return chunks
 
-    # References chunk.
-    if ref_items:
-        ref_text = "\n".join(text for _page, text in ref_items)
-        chunks.append(
-            Chunk(
-                doc_type="Syllabus",
-                page=ref_items[0][0],
-                section_title="Text Books & References",
-                chunk_type="references",
-                content=clean_reference_text(ref_text),
-                metadata={"document_kind": "syllabus"},
-            )
-        )
 
-    chunks.sort(
-        key=lambda c: (c.page if c.page is not None else 0, c.chunk_type != "course_outcome")
+def build_reference_chunk(sections: SyllabusSections) -> Chunk | None:
+    """Emit the single references chunk (if any reference items were seen)."""
+    if not sections.references:
+        return None
+    ref_text = "\n".join(text for _page, text in sections.references)
+    return Chunk(
+        doc_type="Syllabus",
+        page=sections.references[0][0],
+        section_title="Text Books & References",
+        chunk_type="references",
+        content=clean_reference_text(ref_text),
+        metadata=SyllabusReferencesMeta(),
     )
-    return assign_chunk_indices(chunks)
+
+
+def build_unit_chunks(sections: SyllabusSections) -> list[Chunk]:
+    """Emit one chunk per buffered line of every unit."""
+    chunks: list[Chunk] = []
+    for unit_num, unit_buf in sections.units.items():
+        flush_unit_chunks(chunks, unit_num, unit_buf)
+    return chunks
 
 
 def clean_reference_text(text: str) -> str:
@@ -199,7 +275,7 @@ def clean_reference_text(text: str) -> str:
 
 
 def flush_unit_chunks(
-    chunks: list[Chunk], unit_num: int | None, unit_buf: list[tuple]
+    chunks: list[Chunk], unit_num: int | None, unit_buf: list
 ) -> None:
     """Emit one chunk per buffered line of a unit, then clear the buffer."""
     if unit_num is None or not unit_buf:
@@ -222,11 +298,7 @@ def flush_unit_chunks(
                 section_title=section_title,
                 chunk_type="unit",
                 content=content,
-                metadata={
-                    "document_kind": "syllabus",
-                    "unit": unit_num,
-                    "unit_label": unit_label,
-                },
+                metadata=SyllabusUnitMeta(unit=unit_num, unit_label=unit_label),
             )
         )
 

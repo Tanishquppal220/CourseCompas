@@ -202,7 +202,7 @@ CourseCompass/
 │   │   ├── add_fts.py               # CLI wrapper: applies the FTS Alembic revision
 │   │   ├── ingestion/               # parse -> clean -> chunk -> embed -> store
 │   │   │   ├── pipeline.py          # ingestion orchestration (what runs when)
-│   │   │   ├── parsing/             # PDF extractors (PyMuPDF / Docling)
+│   │   │   ├── parsing/             # PDF extractors (PyMuPDF)
 │   │   │   ├── cleaning/            # text cleaning & IP boilerplate removal
 │   │   │   └── chunking/            # chunkers, one module per document type
 │   │   ├── seeding/                 # curriculum data, loaders & seed routine
@@ -272,7 +272,7 @@ Once CourseCompass is running, test these realistic academic queries:
 
 ## 🛠 Technology Stack
 
-- **Backend**: Python 3.13, FastAPI, SQLAlchemy 2.0, Pydantic v2, PyMuPDF, Docling, UV
+- **Backend**: Python 3.13, FastAPI, SQLAlchemy 2.0, Pydantic v2, PyMuPDF, UV
 - **Agent & AI**: LangChain 1.3, LangGraph, AWS Bedrock Converse (`openai.gpt-oss-120b-1:0`), Google Gemini
 - **Embeddings & Reranker**: `BAAI/bge-small-en-v1.5` (384-dim dense vectors), `BAAI/bge-reranker-base` (Cross-Encoder)
 - **Database**: Neon Serverless PostgreSQL 16, `pgvector` (HNSW indexing), PostgreSQL Full-Text Search (`tsvector`, GIN)

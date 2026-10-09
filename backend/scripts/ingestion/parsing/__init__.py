@@ -1,4 +1,4 @@
-"""PDF parsing: cache + backend selection + normalized output structures."""
+"""PDF parsing: on-disk cache + PyMuPDF extraction + normalized output structures."""
 
 from .models import ParsedPdf, ParsedTable, cell_to_text
 from .parser import batch_parse, parse_pdf
