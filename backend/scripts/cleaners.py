@@ -1,4 +1,6 @@
-"""Text cleaning and boilerplate removal for CourseCompass document chunks."""
+"""Text cleaning and boilerplate removal for CourseCompass document chunks.
+This is For Cleaning the IP Documents as it have many diffrent blank pages and cleanign the footer
+"""
 
 import re
 

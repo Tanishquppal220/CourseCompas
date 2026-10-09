@@ -276,4 +276,3 @@ def delete_chat_session(
     db.delete(session)
     db.commit()
     return {"status": "success", "message": "Session deleted successfully"}
-

@@ -2,13 +2,14 @@ import json
 import re
 from typing import Any
 
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.tools import tool
+from sqlalchemy import text
+
 from app.database import SessionLocal
 from app.llm import get_llm_agent
 from app.models import User
 from app.retrieval import search_benefits, search_documents
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-from langchain_core.tools import tool
-from sqlalchemy import text
 
 # ==============================================================================
 # 1. Define Tools for the Agent
@@ -150,7 +151,9 @@ def maximize_academic_benefits(achievements: str, courses: str) -> str:
 
     LPU Stacking Constraints:
     - Exactly ONE mapped benefit per course per term.
-    - 10% Attendance Benefit is university-wide: applies across ALL courses if CGPA >= 7.5 and raw attendance >= 60%.
+    - 10% Attendance Benefit is university-wide ONLY when the achievement/benefit explicitly grants attendance
+      relaxation (competitive-exam attendance category, SCRGM revenue tiers). It applies across ALL courses only
+      then, and only if CGPA >= 7.5 and raw attendance >= 60%. Do NOT assume it in every stacking plan.
     - Duty Leave (DL) applies for all approved event dates without taking a course benefit slot.
     - High-credit courses (3 or 4 credits) should be prioritized for maximum SGPA gain.
 
@@ -175,7 +178,10 @@ def maximize_academic_benefits(achievements: str, courses: str) -> str:
             "2. Allocate high-value waivers (Full CA + MTE or Grade Jump to O) to the highest-credit courses for maximum SGPA boost."
         )
         summary.append(
-            "3. Check if student's CGPA >= 7.5: if yes, simultaneously stack the 10% Attendance Benefit across all courses."
+            "3. ONLY mention the 10% Attendance Benefit if the student's achievement explicitly grants attendance "
+            "relaxation (competitive-exam attendance category, SCRGM revenue tiers). State it at most once, as "
+            "conditional (CGPA >= 7.5 AND >= 60% raw attendance, subject to Standing Committee approval) and as part "
+            "of the benefit itself - never as an extra bonus in unrelated stacking plans."
         )
         summary.append(
             "4. Remind student to submit a distinct nomination on UMS for each course via 'Placement Services / Academic Services >>> Special Academic Benefit'."
@@ -261,8 +267,10 @@ def run_agent(
         f"Current Term: {profile.get('current_term', 'N/A')} | "
         f"Program: {profile.get('program_name', 'B.Tech CSE')} | "
         f"CGPA: {profile.get('current_cgpa', 'N/A')}\n\n"
-        "Proactively check this student's CGPA against LPU thresholds when they ask about:\n"
-        "- 10% Attendance Benefit: requires CGPA >= 7.5 and >= 60% raw attendance.\n"
+        "Check CGPA thresholds ONLY if the student explicitly asks about the specific benefit. Do NOT proactively "
+        "volunteer the 10% Attendance Benefit or any other threshold in unrelated conversations "
+        "(e.g. SCRGM, internships, grade upgradation).\n"
+        "- 10% Attendance Benefit (ONLY if asked): requires CGPA >= 7.5 and >= 60% raw attendance.\n"
         "- Internship course integration: standard requirement CGPA >= 6.0.\n"
         "- NPTEL Full Equivalence: requires CGPA >= 7.0.\n"
         "- RPL & Grade Upgradation: NO minimum CGPA required.\n\n"
