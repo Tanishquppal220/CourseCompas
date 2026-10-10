@@ -232,7 +232,7 @@ def run_ingestion(
     continue_on_error: bool = False,
 ) -> None:
     """Run the full pipeline (parse -> chunk -> embed -> store -> index)."""
-    ensure_tables()
+    ensure_tables() # 
     db = SessionLocal()
     started = time.time()
     try:

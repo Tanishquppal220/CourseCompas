@@ -1,6 +1,7 @@
+import re
 from typing import Any
 
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.embeddings import embed_query
@@ -12,13 +13,63 @@ COURSE_DOC_TYPES = (
     "IP",
 )
 
+# Calibrated hybrid multiplier (FTS cover density weight relative to cosine similarity base)
+HYBRID_ALPHA = 1.2
+
+FTS_STOP_PATTERNS = [
+    r"\b(what\s+is|what\s+are|what\s+topics\s+are\s+covered\s+in|topics\s+covered\s+in|what\s+topics\s+are)\b",
+    r"\b(can\s+you\s+show\s+me|show\s+me\s+the|tell\s+me\s+about|can\s+you\s+tell\s+me)\b",
+    r"\b(how\s+does|how\s+can|how\s+do\s+i|what\s+happens\s+if\s+i|can\s+an)\b",
+    r"\b(difference\s+between|list\s+of|breakdown\s+of|overview\s+of)\b",
+    r"\b(topics|covered|syllabus|details|guidelines|requirement|requirements)\b",
+]
+
+
+def clean_query_for_fts(query: str) -> tuple[str, str | None]:
+    """Distills conversational natural language queries into content keywords for FTS."""
+    text_clean = query
+
+    # Extract course code (e.g. CSE205, INT108)
+    course_match = re.search(r"\b([A-Za-z]{3}\d{3})\b", text_clean)
+    extracted_code = course_match.group(1).upper() if course_match else None
+
+    # Remove conversational filler patterns
+    for pat in FTS_STOP_PATTERNS:
+        text_clean = re.sub(pat, " ", text_clean, flags=re.IGNORECASE)
+
+    # Clean punctuation
+    text_clean = re.sub(r"[?!.,;:\"'(){}\[\]]", " ", text_clean)
+
+    tokens = [
+        t
+        for t in text_clean.split()
+        if len(t) > 1
+        and t.lower()
+        not in {
+            "the",
+            "in",
+            "and",
+            "or",
+            "to",
+            "for",
+            "of",
+            "on",
+            "at",
+            "by",
+            "an",
+            "is",
+            "if",
+            "my",
+        }
+    ]
+
+    cleaned_query = " ".join(tokens)
+    return (cleaned_query if cleaned_query else query), extracted_code
+
 
 def _source_label(doc_type: str, document_name: str | None) -> str:
     name = document_name or "unknown"
     return f"{doc_type}/{name}"
-
-
-from sqlalchemy import func
 
 
 def _course_search(
@@ -30,28 +81,28 @@ def _course_search(
     doc_types: list[str] | None,
     chunk_types: list[str] | None,
 ) -> list[dict[str, Any]]:
-    # 1. Prepare keyword search using websearch_to_tsquery for natural language
-    tsquery = func.websearch_to_tsquery("english", query_text)
+    # 1. Distill natural language into content keywords for FTS and detect course codes
+    cleaned_text, detected_code = clean_query_for_fts(query_text)
+    effective_code = course_code or detected_code
+
+    tsquery = func.websearch_to_tsquery("english", cleaned_text)
 
     # 2. Vector distance
     distance = CourseDocumentChunk.embedding.cosine_distance(query_vector)
 
-    # 3. Hybrid scoring: scale both to a similar range (e.g. 0-1) and weight them
-    # ts_rank scales naturally, but can exceed 1. We'll use a normalized rank.
-    # cosine distance is 0 to 2 (1 - distance is -1 to 1). We'll map (1 - distance) and add normalized keyword score.
-    # A simple formula: score = (1.0 - distance) + (func.ts_rank_cd(fts, tsquery) * 0.5)
-
-    hybrid_score = (1.0 - distance) + func.coalesce(
-        func.ts_rank_cd(CourseDocumentChunk.fts, tsquery), 0.0
-    ) * 0.5
+    # 3. Hybrid scoring: normalized cosine similarity + calibrated cover-density rank
+    hybrid_score = (1.0 - distance) + (
+        func.coalesce(func.ts_rank_cd(CourseDocumentChunk.fts, tsquery), 0.0)
+        * HYBRID_ALPHA
+    )
 
     q = db.query(
         CourseDocumentChunk,
         hybrid_score.label("score"),
     )
 
-    if course_code:
-        q = q.filter(CourseDocumentChunk.course_code == course_code.upper())
+    if effective_code:
+        q = q.filter(CourseDocumentChunk.course_code == effective_code.upper())
     if doc_types:
         q = q.filter(CourseDocumentChunk.doc_type.in_(doc_types))
     if chunk_types:
@@ -62,6 +113,24 @@ def _course_search(
     q = q.filter(or_(distance < 0.6, CourseDocumentChunk.fts.op("@@")(tsquery)))
 
     rows = q.order_by(hybrid_score.desc()).limit(k).all()
+
+    # Fallback: if effective_code filter was inferred (not explicitly requested) and gave 0 results,
+    # re-run without the code constraint to prevent empty candidate lists
+    if not rows and detected_code and not course_code:
+        q_relaxed = db.query(
+            CourseDocumentChunk,
+            hybrid_score.label("score"),
+        )
+        if doc_types:
+            q_relaxed = q_relaxed.filter(CourseDocumentChunk.doc_type.in_(doc_types))
+        if chunk_types:
+            q_relaxed = q_relaxed.filter(
+                CourseDocumentChunk.chunk_type.in_(chunk_types)
+            )
+        q_relaxed = q_relaxed.filter(
+            or_(distance < 0.6, CourseDocumentChunk.fts.op("@@")(tsquery))
+        )
+        rows = q_relaxed.order_by(hybrid_score.desc()).limit(k).all()
 
     return [
         {
@@ -85,12 +154,13 @@ def _benefit_search(
     query_vector: list,
     k: int,
 ) -> list[dict[str, Any]]:
-    tsquery = func.websearch_to_tsquery("english", query_text)
+    cleaned_text, _ = clean_query_for_fts(query_text)
+    tsquery = func.websearch_to_tsquery("english", cleaned_text)
     distance = BenefitChunk.embedding.cosine_distance(query_vector)
 
-    hybrid_score = (1.0 - distance) + func.coalesce(
-        func.ts_rank_cd(BenefitChunk.fts, tsquery), 0.0
-    ) * 0.5
+    hybrid_score = (1.0 - distance) + (
+        func.coalesce(func.ts_rank_cd(BenefitChunk.fts, tsquery), 0.0) * HYBRID_ALPHA
+    )
 
     q = db.query(
         BenefitChunk,
@@ -129,7 +199,7 @@ def search_documents(
     rerank: bool = True,
 ) -> list[dict[str, Any]]:
     query_vector = embed_query(query)
-    candidate_k = max(15, k * 3) if rerank else k
+    candidate_k = max(8, k * 2) if rerank else k
 
     if source_filter:
         source_results = _course_search(
@@ -198,7 +268,7 @@ def search_benefits(
     rerank: bool = True,
 ) -> list[dict[str, Any]]:
     query_vector = embed_query(query)
-    candidate_k = max(15, k * 3) if rerank else k
+    candidate_k = max(8, k * 2) if rerank else k
     results = _benefit_search(db, query, query_vector, candidate_k)
     if chunk_types:
         results = [r for r in results if r["chunk_type"] in chunk_types]
