@@ -7,9 +7,8 @@ shared Open Minor basket) into Postgres using the models in app.models.
 Safe to re-run.
 """
 
-from app.database import SessionLocal, engine
+from app.database import SessionLocal, upgrade_schema
 from app.models import (
-    Base,
     BasketOption,
     Course,
     CourseNature,
@@ -99,7 +98,7 @@ def load_all(session):
 
 def run() -> None:
     """Create tables (if needed), load all curriculum data, and report counts."""
-    Base.metadata.create_all(engine, checkfirst=True)  # ensure tables exist
+    upgrade_schema()  # single schema entrypoint (extension + tables + migrations)
 
     session = SessionLocal()
     try:

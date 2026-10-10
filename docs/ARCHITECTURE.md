@@ -256,6 +256,6 @@ Located in `backend/scripts/` (thin CLI entrypoints) and `backend/scripts/ingest
   - `benefits.py` (`chunk_benefits`): Chunks the EduRevolution policy document into distinct policy overviews, criteria matrix rows, and submission rules.
   - `chunk.py`: shared `Chunk` dataclass and helpers.
 - `ingestion/cleaning/`: Strips repetitive university headers, footers, tentative plan disclaimers, and boilerplate text.
-- `ingestion/pipeline.py`: End-to-end ingestion orchestrator (`ingest.py` CLI) with multi-process worker pool (`--workers N`), incremental change detection, and batch vectorization.
+- `ingestion/pipeline.py`: End-to-end ingestion orchestrator (`ingest.py` CLI). Parses + chunks in a dynamic process pool (`--workers N`); embeds and persists in the single main process (one embedding-model copy); incremental change detection.
 - `seeding/`: Relational curriculum seeding (`seed.py` CLI) for all 8 terms, 250+ courses, elective areas, and basket options.
-- `alembic/` + `alembic.ini`: Schema migrations (baseline, full-text search, and nullable `page_number`). `scripts/add_fts.py` is a thin wrapper for the FTS revision; general changes use `uv run alembic upgrade head`.
+- `alembic/` + `alembic.ini`: Schema migrations (baseline, full-text search, and nullable `page_number`). Migrations apply automatically at ingest/seed start via `upgrade_schema()` in `app/database.py` (extension + `create_all` + `alembic upgrade head`); `scripts/add_fts.py` is a thin wrapper for the FTS revision and `uv run alembic upgrade head` works manually too.

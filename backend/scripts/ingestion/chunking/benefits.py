@@ -1,6 +1,13 @@
 """Chunker for the academic benefits markdown (``benefits_clean.md``).
 
 Produces policy-overview, criteria-row, and special-note chunks.
+
+Provenance: ``backend/data/benefits_clean.md`` is a hand-cleaned, manually
+restructured copy of the policy guide in ``docs/BENEFITS_AND_POLICIES.md``
+(raw prose -> the ``|``-table shape this chunker parses). There is no
+automated raw->clean step today; regenerating the file is a manual step.
+Chunks store ``page=None`` (the source has no pages) and the table number
+lives in each chunk's ``metadata.table_index``.
 """
 
 from pathlib import Path

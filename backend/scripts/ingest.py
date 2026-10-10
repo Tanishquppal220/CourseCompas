@@ -11,7 +11,7 @@ the import path so the pipeline runs with:
     uv run python scripts/ingest.py                 # everything, incremental
     uv run python scripts/ingest.py --workers 2     # half the first-run time
     uv run python scripts/ingest.py --benefits-only
-    uv run python scripts/ingest.py --force-rebuild # recompute all + ignore cache
+    uv run python scripts/ingest.py --force-rebuild # recompute all, skipping the DB already-present check
 
 See ``ingestion/README.md`` for the stage-by-stage map.
 """

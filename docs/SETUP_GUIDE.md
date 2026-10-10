@@ -155,7 +155,7 @@ uv run python scripts/ingest.py
 ```
 
 #### Ingestion CLI Options:
-- `--workers N`: Run with `N` parallel worker processes to accelerate PDF parsing:
+- `--workers N`: Run PDF parsing/chunking with `N` parallel worker processes (embedding and DB writes always stay in the single main process):
   ```bash
   uv run python scripts/ingest.py --workers 4
   ```

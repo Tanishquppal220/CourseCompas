@@ -1,18 +1,27 @@
-"""Text cleaning: generic whitespace helpers + IP-specific boilerplate filters."""
+"""Text cleaning: generic whitespace/page-furniture helpers + IP boilerplate."""
 
 from .instruction_plan import (
     clean_chunk_text,
+    has_ip_boilerplate,
     is_boilerplate,
-    looks_like_page_furniture,
-    strip_footer,
+    strip_ip_boilerplate,
 )
-from .text import collapse_whitespace, normalize_whitespace
+from .text import (
+    collapse_whitespace,
+    is_page_furniture,
+    normalize_text,
+    normalize_whitespace,
+    strip_page_furniture,
+)
 
 __all__ = [
     "clean_chunk_text",
     "collapse_whitespace",
+    "has_ip_boilerplate",
     "is_boilerplate",
-    "looks_like_page_furniture",
+    "is_page_furniture",
+    "normalize_text",
     "normalize_whitespace",
-    "strip_footer",
+    "strip_ip_boilerplate",
+    "strip_page_furniture",
 ]

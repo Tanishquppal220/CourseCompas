@@ -10,16 +10,24 @@ uv run python scripts/ingest.py --courses CSE273 CSE101
 uv run python scripts/ingest.py                 # everything, incremental
 uv run python scripts/ingest.py --workers 2     # half the first-run time
 uv run python scripts/ingest.py --benefits-only
-uv run python scripts/ingest.py --force-rebuild # recompute all + ignore DB cache
-uv run python scripts/ingest.py --force         # ignore the on-disk parse cache
+uv run python scripts/ingest.py --force-rebuild # recompute all, skipping the DB already-present check
+uv run python scripts/ingest.py --force         # re-ingest every course doc (parse cache still used)
 uv run python scripts/ingest.py --continue-on-error  # keep going after a failure
 ```
 
 By default the pipeline aborts on the first failed document (with a full
 traceback in the logs); `--continue-on-error` restores best-effort batch mode.
 
+`--workers N` parallelizes the CPU-bound part only: PDF parsing + chunking run
+in up to N worker processes, while embedding and database writes always run in
+the single main process, so exactly one copy of the embedding model is loaded
+no matter how many workers are used.
+
 Schema changes live outside this folder, in `backend/alembic/` (see
-`alembic/versions/`). Run `uv run alembic upgrade head` from `backend/`.
+`alembic/versions/`). Every ingest and seed run applies them automatically
+via `upgrade_schema()` in `app/database.py` (pgvector extension + `create_all`
+for fresh databases, then `alembic upgrade head`); `uv run alembic upgrade
+head` from `backend/` works manually too.
 
 `scripts/ingest.py` is only a thin entrypoint; everything real lives here.
 
@@ -29,7 +37,7 @@ Schema changes live outside this folder, in `backend/alembic/` (see
 |---|---|---|
 | 1 | `cli.py` | Parses CLI flags. |
 | 2 | `pipeline.py` | Orchestrator. `run_ingestion()` = **parse → chunk → embed → store → index**. Also holds incremental change detection. |
-| 3 | `database.py` | Creates tables + pgvector extension, builds HNSW vector indexes. |
+| 3 | `database.py` | Schema via `upgrade_schema()` (`app/database.py`: extension + tables + Alembic migrations); builds HNSW vector indexes. |
 | 4 | `parsing/` | PDFs → `ParsedPdf`. |
 | 5 | `cleaning/` | Whitespace + IP footer/boilerplate removal. |
 | 6 | `chunking/` | `ParsedPdf` → `Chunk` objects, **one module per document type**. |
@@ -48,13 +56,13 @@ Schema changes live outside this folder, in `backend/alembic/` (see
 ### `cleaning/`
 | File | Role |
 |---|---|
-| `text.py` | Generic `collapse_whitespace`, `normalize_whitespace`. |
-| `instruction_plan.py` | IP footer patterns, boilerplate phrases, `clean_chunk_text`. |
+| `text.py` | Generic whitespace (`collapse_whitespace`, `normalize_whitespace`, `normalize_text`) + page furniture (`strip_page_furniture`, `is_page_furniture`, `FOOTER_PATTERNS`). |
+| `instruction_plan.py` | IP-specific boilerplate (`IP_BOILERPLATE_PHRASES`, `strip_ip_boilerplate`, `has_ip_boilerplate`) + the composed `clean_chunk_text` / `is_boilerplate` the chunkers call. |
 
 ### `chunking/`
 | File | Role |
 |---|---|
-| `chunk.py` | `Chunk` dataclass + shared helpers (`truncate_text`, `collect_cleaned_text_items`). `chunk_index` is owned by the pipeline, not the chunkers. |
+| `chunk.py` | `Chunk` dataclass + shared helpers (`truncate_text`, `collect_cleaned_text_items` with opt-out `strip_footers=` / `drop_boilerplate=` flags). `chunk_index` is owned by the pipeline, not the chunkers. |
 | `metadata.py` | Typed per-chunk metadata dataclasses (`ChunkMeta`) serialized with `.to_dict()`. |
 | `syllabus.py` | `chunk_syllabus` — Syllabus PDFs (classify-then-build: sections → builders). |
 | `instruction_plan.py` | `chunk_ip` — Instruction Plan PDFs (tables classified once into `TableKind`, then dispatched). |

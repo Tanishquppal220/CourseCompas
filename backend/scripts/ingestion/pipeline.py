@@ -2,9 +2,9 @@
 
 Reading order of a run:
 
-    1. ``ensure_tables``            create tables + pgvector extension
+    1. ``ensure_tables``            schema: extension + tables + migrations
     2. ``plan_course_docs``         decide which (course, doc_type) need work
-    3. ``run_course_ingest``        parse PDFs, chunk, embed, persist
+    3. ``run_course_ingest``        parse/chunk in a pool, embed, persist
     4. ``ingest_benefits``          same for benefits_clean.md
     5. ``create_hnsw_indexes``      build the vector indexes
 
@@ -13,15 +13,15 @@ already exist is skipped, so re-runs only reprocess what is missing. Within a
 run each document is idempotent (delete-then-insert). Use ``--force-rebuild``
 to recompute everything from scratch.
 
-Parsing is CPU-bound per page. Use ``--workers N`` to run N independent
-processes, each handling its own share of files. Each worker loads its own
-copy of the embedding model, so watch RAM when raising ``--workers``.
+Parsing is CPU-bound per page, so ``--workers N`` runs parsing/chunking in up
+to N processes with dynamic scheduling. Embedding and persistence always run
+in the single main process, so exactly one copy of the embedding model is
+loaded no matter how many workers are used.
 """
 
 import logging
 import time
 from concurrent.futures import ProcessPoolExecutor
-from functools import partial
 
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
@@ -70,103 +70,111 @@ def chunk_parsed_document(parsed, doc_type: str):
     return chunk_ip(parsed.text_items, parsed.tables)
 
 
-def ingest_course_docs(db, tasks: list, continue_on_error: bool = False) -> int:
-    """Parse (if needed), chunk, embed, and persist one batch of doc sets.
+def parse_and_chunk_one(task):
+    """Parse one PDF (cache-aware) and chunk it; runs in a worker process.
 
-    On failure the transaction is rolled back and the error is logged with a
-    full traceback. The run aborts unless ``continue_on_error`` is set.
+    Returns ``(code, doc_type, document_name, chunks | None)`` where ``None``
+    means the PDF failed to parse. The worker never embeds or touches the
+    database, so worker processes stay small and no embedding model copy is
+    loaded per worker. Each file is handled by exactly one worker, so the
+    per-file parse cache never sees concurrent writers.
+    """
+    code, doc_type, doc_name, pdf = task
+    parsed = None
+    for _path, doc in batch_parse([pdf], use_cache=True, verbose=False):
+        parsed = doc
+    if parsed is None:
+        return code, doc_type, doc_name, None
+    return code, doc_type, doc_name, chunk_parsed_document(parsed, doc_type)
+
+
+def persist_document_chunks(db, result, continue_on_error: bool = False) -> int:
+    """Embed and persist one document's chunks; runs in the main process.
+
+    ``result`` is a ``(code, doc_type, document_name, chunks | None)`` tuple
+    from :func:`parse_and_chunk_one`. The embedding model is loaded here via
+    the process-local ``lru_cache``, keeping it to a single copy per run.
+    """
+    code, doc_type, doc_name, chunks = result
+    if chunks is None:
+        logger.error("%s %s: parse failed", code, doc_type)
+        if not continue_on_error:
+            raise RuntimeError(f"Failed to parse {doc_name}")
+        return 0
+    if not chunks:
+        log(f"  {code} {doc_type}: no chunks, skipped")
+        return 0
+
+    t0 = time.time()
+    texts = [c.content for c in chunks]
+    embeddings = embed_texts(texts)
+    rows = [
+        {
+            "course_code": code,
+            "document_name": doc_name,
+            "doc_type": doc_type,
+            "section_title": c.section_title,
+            "page_number": c.page,
+            "chunk_index": i,
+            "chunk_type": c.chunk_type,
+            "content": c.content,
+            "metadata": c.metadata.to_dict() if c.metadata else {},
+            "embedding": vec,
+        }
+        for i, (c, vec) in enumerate(zip(chunks, embeddings))
+    ]
+
+    db.query(CourseDocumentChunk).filter_by(
+        course_code=code, doc_type=doc_type
+    ).delete()
+    try:
+        db.bulk_insert_mappings(CourseDocumentChunk, rows)
+        db.commit()
+        log(f"  {code} {doc_type}: {len(rows)} chunks in {time.time() - t0:.0f}s")
+        return len(rows)
+    except IntegrityError:
+        db.rollback()
+        logger.exception("%s %s: failed to persist chunks", code, doc_type)
+        if not continue_on_error:
+            raise
+    except Exception:
+        db.rollback()
+        logger.exception("%s %s: ingestion error", code, doc_type)
+        if not continue_on_error:
+            raise
+    return 0
+
+
+def run_course_ingest(tasks: list, workers: int, continue_on_error: bool = False) -> int:
+    """Ingest the task list, parsing in a process pool when ``workers > 1``.
+
+    Parsing (and chunking) is CPU-bound, so it runs in up to ``workers``
+    processes with dynamic scheduling (no round-robin split, so heavy IP docs
+    cannot cluster on one worker). Embedding and persistence always run in
+    this single main process, holding one embedding-model copy.
     """
     if not tasks:
         return 0
 
-    paths = sorted({t[3] for t in tasks})
-    log(f"  parsing {len(paths)} uncached PDFs")
-    parsed_map = {
-        p: parsed for p, parsed in batch_parse(paths, use_cache=True, verbose=True)
-    }
-
-    by_code = {}
-    for code, doc_type, doc_name, pdf in tasks:
-        by_code.setdefault(code, []).append((doc_type, doc_name, pdf))
-
-    total = 0
-    for code, docsets in sorted(by_code.items()):
-        for doc_type, doc_name, pdf in docsets:
-            parsed = parsed_map.get(pdf.resolve())
-            if parsed is None:
-                logger.error("%s %s: parse failed", code, doc_type)
-                if not continue_on_error:
-                    raise RuntimeError(f"Failed to parse {pdf}")
-                continue
-            chunks = chunk_parsed_document(parsed, doc_type)
-            if not chunks:
-                log(f"  {code} {doc_type}: no chunks, skipped")
-                continue
-
-            t0 = time.time()
-            texts = [c.content for c in chunks]
-            embeddings = embed_texts(texts)
-            rows = [
-                {
-                    "course_code": code,
-                    "document_name": doc_name,
-                    "doc_type": doc_type,
-                    "section_title": c.section_title,
-                    "page_number": c.page,
-                    "chunk_index": i,
-                    "chunk_type": c.chunk_type,
-                    "content": c.content,
-                    "metadata": c.metadata.to_dict() if c.metadata else {},
-                    "embedding": vec,
-                }
-                for i, (c, vec) in enumerate(zip(chunks, embeddings))
-            ]
-
-            db.query(CourseDocumentChunk).filter_by(
-                course_code=code, doc_type=doc_type
-            ).delete()
-            try:
-                db.bulk_insert_mappings(CourseDocumentChunk, rows)
-                db.commit()
-                total += len(rows)
-                log(
-                    f"  {code} {doc_type}: {len(rows)} chunks in {time.time() - t0:.0f}s"
-                )
-            except IntegrityError:
-                db.rollback()
-                logger.exception("%s %s: failed to persist chunks", code, doc_type)
-                if not continue_on_error:
-                    raise
-            except Exception:
-                db.rollback()
-                logger.exception("%s %s: ingestion error", code, doc_type)
-                if not continue_on_error:
-                    raise
-    return total
-
-
-def ingest_task_batch(tasks: list, continue_on_error: bool = False) -> int:
-    """Worker entrypoint: opens its own DB session and ingests its share."""
     db = SessionLocal()
+    total = 0
     try:
-        return ingest_course_docs(db, tasks, continue_on_error=continue_on_error)
+        if workers <= 1 or len(tasks) == 1:
+            for task in tasks:
+                total += persist_document_chunks(
+                    db,
+                    parse_and_chunk_one(task),
+                    continue_on_error=continue_on_error,
+                )
+        else:
+            log(f"  parsing {len(tasks)} docs across {workers} processes")
+            with ProcessPoolExecutor(max_workers=workers) as pool:
+                for result in pool.map(parse_and_chunk_one, tasks):
+                    total += persist_document_chunks(
+                        db, result, continue_on_error=continue_on_error
+                    )
     finally:
         db.close()
-
-
-def run_course_ingest(tasks: list, workers: int, continue_on_error: bool = False) -> int:
-    """Ingest the task list, optionally across multiple worker processes."""
-    if not tasks:
-        return 0
-    if workers <= 1 or len(tasks) == 1:
-        return ingest_task_batch(tasks, continue_on_error=continue_on_error)
-    job_splits = [t for t in [tasks[i::workers] for i in range(workers)] if t]
-    log(f"  running {len(job_splits)} ingestion processes")
-    total = 0
-    with ProcessPoolExecutor(max_workers=len(job_splits)) as pool:
-        worker = partial(ingest_task_batch, continue_on_error=continue_on_error)
-        for count in pool.map(worker, job_splits):
-            total += count
     return total
 
 
@@ -183,7 +191,7 @@ def ingest_benefits(db, force_rebuild: bool, continue_on_error: bool = False) ->
     embeddings = embed_texts([c.content for c in chunks])
     rows = [
         {
-            "document_name": "Academic Benefits.pdf",
+            "document_name": "benefits_clean.md",
             "section_title": c.section_title,
             "page_number": c.page,
             "chunk_index": i,

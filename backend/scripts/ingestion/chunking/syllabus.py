@@ -12,7 +12,7 @@ emit the chunks from those sections.
 import re
 from dataclasses import dataclass, field
 
-from ..cleaning import normalize_whitespace
+from ..cleaning import collapse_whitespace, normalize_whitespace
 from .chunk import (
     CO_RE,
     Chunk,
@@ -270,8 +270,7 @@ def clean_reference_text(text: str) -> str:
         text,
         flags=re.IGNORECASE,
     )
-    text = re.sub(r"[ \t]{2,}", " ", text)
-    return "\n".join(ln.strip() for ln in text.splitlines() if ln.strip())
+    return collapse_whitespace(text)
 
 
 def flush_unit_chunks(

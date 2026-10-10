@@ -173,8 +173,8 @@ curl -X POST "http://localhost:8000/api/chat" \
 {
   "response": "Congratulations on completing your internship! Based on the LPU EduRevolution policy for **Internship beyond Curriculum**:\n\n- **Stipend Category**: ₹10,000 – ₹20,000 / month\n- **Duration**: 3 Months\n- **Organization**: Local / Startup\n\n### Eligible Academic Benefits:\n- **Course Benefit**: **Full Marks in All CA + MTE** in one mapped course.\n\n### Requirements & Steps:\n1. Ensure your CGPA is $\\ge 6.0$.\n2. Navigate to **UMS >>> Placement Services >>> Special Academic Benefit**.\n3. Submit your Offer Letter, Completion Certificate, and bank statements/stipend slips.",
   "sources": [
-    "Benefits/criteria_row: Academic Benefits.pdf",
-    "Benefits/policy_overview: Academic Benefits.pdf"
+    "Benefits/criteria_row: benefits_clean.md",
+    "Benefits/policy_overview: benefits_clean.md"
   ],
   "session_id": "b3e0c7a5-5154-46c9-b7e1-88989bbd8f8a"
 }

@@ -3,7 +3,13 @@
 import re
 from dataclasses import dataclass, field
 
-from ..cleaning import clean_chunk_text, is_boilerplate
+from ..cleaning import (
+    collapse_whitespace,
+    has_ip_boilerplate,
+    is_page_furniture,
+    strip_ip_boilerplate,
+    strip_page_furniture,
+)
 from .metadata import ChunkMeta
 
 # Shared document patterns (used by both the Syllabus and IP chunkers).
@@ -40,10 +46,32 @@ def truncate_text(text: str, limit: int = 200) -> str:
     return text[:limit].rstrip() + "..."
 
 
-def collect_cleaned_text_items(text_items):
-    """Yield ``(page, cleaned_text)`` for non-boilerplate items in reading order."""
+def collect_cleaned_text_items(
+    text_items, *, strip_footers: bool = True, drop_boilerplate: bool = True
+):
+    """Yield ``(page, cleaned_text)`` for non-boilerplate items in reading order.
+
+    Cleaning is an explicit, opt-in pipeline:
+
+    * ``strip_footers`` -- remove generic page furniture (session/page footer
+      lines) and filter items that are pure page furniture.
+    * ``drop_boilerplate`` -- remove instruction-plan disclaimer text and
+      filter items that consist entirely of IP boilerplate phrases.
+
+    Both default to True, preserving the historical behavior shared by the
+    Syllabus and IP chunkers; a per-source caller can opt out of a step.
+    """
     for item in text_items:
-        text = clean_chunk_text(item.get("text", ""))
-        if not text or is_boilerplate(text):
+        text = item.get("text", "")
+        if strip_footers:
+            text = strip_page_furniture(text)
+        if drop_boilerplate:
+            text = strip_ip_boilerplate(text)
+        text = collapse_whitespace(text).strip()
+        if not text:
+            continue
+        if drop_boilerplate and has_ip_boilerplate(text):
+            continue
+        if strip_footers and is_page_furniture(text):
             continue
         yield item.get("page", 0), text

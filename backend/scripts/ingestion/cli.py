@@ -30,9 +30,9 @@ def build_argument_parser() -> argparse.ArgumentParser:
         "--workers",
         type=int,
         default=1,
-        help="processes to run parsing/embedding in (default 1; each worker "
-        "loads its own copy of the embedding model, so use more than 1 only "
-        "on machines with plenty of free memory)",
+        help="processes to run PDF parsing/chunking in (default 1; embedding "
+        "and database writes always run in the single main process, which "
+        "loads one copy of the embedding model)",
     )
     parser.add_argument(
         "--continue-on-error",

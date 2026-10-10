@@ -38,16 +38,12 @@ This document provides a factual, evidence-backed audit of the **CourseCompass**
 | `pymupdf` | `>=1.28.2` | High-performance PDF processing engine |
 | `pymupdf-layout` | `>=1.28.2` | Document layout detection extension for PyMuPDF |
 | `pymupdf4llm` | `>=1.28.2` | Markdown extraction from PDFs for LLMs |
-| `ruff` | `>=0.16.6` | Fast Python linter and code formatter |
-| `playwright` | `>=1.62.0` | Headless and headed browser automation |
-| `nest-asyncio` | `>=1.6.0` | Patch for concurrent asyncio event loops |
 
 #### Backend Development Dependencies (`dependency-groups.dev`)
 | Package | Version Specifier | Category / Purpose |
 | :--- | :--- | :--- |
-| `pytest` | `>=9.1.1` | Testing framework |
-| `pytest-asyncio` | `>=1.4.0` | Asynchronous test execution for pytest |
 | `python-docx` | `>=1.2.0` | Parsing and reading DOCX syllabus documents |
+| `ruff` | `>=0.16.6` | Fast Python linter and code formatter |
 
 #### Additional Package Manifests
 - `requirements.txt`: **not present**
@@ -106,7 +102,7 @@ This document provides a factual, evidence-backed audit of the **CourseCompass**
 
 ### 1.4 Model Files & Referenced Architectures
 - **Committed Model Files in Repository Source Tree (`.pt`, `.pth`, `.tflite`, `.xgb`, `.onnx`, `.bin`, `.safetensors`, `.pkl`)**: **not present**
-  *(Note: Cached internal `.onnx` and `.pkl` artifacts are located strictly within Python virtual environment packages (`backend/.venv/`) for upstream dependencies `rapidocr-onnxruntime` and `pymupdf`, and PyMuPDF document hash caches in `backend/.cache/pymupdf/`, but no model weights or checkpoints are authored or committed in the project codebase).*
+  *(Note: Cached internal `.onnx` and `.pkl` artifacts are located strictly within Python virtual environment packages (`backend/.venv/`) for upstream dependencies `rapidocr` and `pymupdf`, and PyMuPDF document hash caches in `backend/.cache/pymupdf/`, but no model weights or checkpoints are authored or committed in the project codebase).*
 
 - **Referenced Pretrained & Cloud Models**:
   - **Dense Text Embedding Model**: `BAAI/bge-small-en-v1.5`
@@ -161,24 +157,24 @@ This document provides a factual, evidence-backed audit of the **CourseCompass**
 | **Results Directory (`results/`)** | **not present** | No standalone results folder exists. |
 | **Confusion Matrices** | **not present** | No evaluation confusion matrices are present. *(Note: The phrase "confusion matrix" appears solely as an academic syllabus topic covered in Lecture 11 of the CSE274 machine learning course parsed inside `backend/results.md`).* |
 | **Benchmark / Offline Model Metrics (`accuracy`, `precision`, `recall`, `F1`, `ROC-AUC`)** | **not present** | No model training or validation benchmark scores exist in the repository. *(Note: `docs/ARCHITECTURE.md` uses "precision" purely conceptually when describing retrieval chunk quality: "Top 5 Highest-Precision Chunks").* |
-| **Evaluation Logs** | **not present** | No model test logs exist. *(Files with `.log` extensions in `backend/profiles/portal_session/` are Chromium LevelDB session state logs generated during Playwright execution).* |
-| **Test Suite Verification** | **present (Functional)** | `backend/tests/test_browser_automation.py` provides automated integration tests for Playwright browser interaction, mock LMS form filling, and blocker diagnostic detection. |
+| **Evaluation Logs** | **not present** | No model test logs exist (no `.log` files in the repository outside virtual-environment and dependency directories). |
+| **Test Suite Verification** | **not present** | No automated tests (e.g. pytest) exist in the repository; `test.md` and `docs/test.md` are standalone Markdown documents (a benefits-table dump and a browser-automation research note), not test suites. |
 
 ---
 
 ## 4. Largest / Most Complex Function in the Codebase
 
 ### Function Identification
-- **Function Name**: `form_filling_node(state: LMSAutomationState)`
-- **File**: `backend/app/browser_agent.py`
-- **Location**: Lines 305 to 522
-- **Function Length**: **218 lines**
-- **Estimated Cyclomatic Complexity**: **~52**
+- **Function Name**: `chunk_benefits(md_path: Path)`
+- **File**: `backend/scripts/ingestion/chunking/benefits.py`
+- **Location**: Lines 24 to 179
+- **Function Length**: **156 lines**
+- **Estimated Cyclomatic Complexity**: **~52** (AST decision-point count: conditionals, loops, `try`/`with` blocks, and `and`/`or` operators, plus the base path)
 
 ### 3-Line Explanation
-1. Automates a Playwright browser session to populate academic benefit claim forms with candidate details (name, registration number, course code, category, proof description) using prioritized accessible role selectors and CSS fallback heuristics.
-2. Performs real-time DOM diagnostics to identify rendering blockers (CAPTCHA gates, MFA requirements, missing fields, or modal dialogs), capturing base64 diagnostic screenshots and routing workflow execution into human-in-the-loop escalation upon detection.
-3. Submits the form, validates subsequent DOM alert states for input rejections or confirmation identifiers, closes the browser context cleanly, and emits structured completion status back to the LangGraph state machine.
+1. Reads `benefits_clean.md`, splits it into markdown table blocks, and tracks the current section title plus a running table index as it walks each block.
+2. Per table it extracts policy-overview/eligibility paragraphs, column headers, and trailing footer notes, emitting `policy_overview` chunks and per-row `criteria_row` chunks with backward/forward fill for sparse cells (the benefit column and stipend/duration/category fields).
+3. Emits `special_note` chunks for footer notes and attaches typed `Benefits*Meta` dataclasses so the ingestion pipeline serializes each chunk's metadata into the database's JSONB column.
 
 ---
 
@@ -186,36 +182,40 @@ This document provides a factual, evidence-backed audit of the **CourseCompass**
 
 ### 5.1 Backend Python Modules (`backend/`)
 - `backend/app/__init__.py`: imports none (empty package initialization)
-- `backend/app/agent.py`: imports `app.browser_agent`, `app.database`, `app.llm`, `app.models`, `app.retrieval`
+- `backend/app/agent.py`: imports `app.database`, `app.llm`, `app.models`, `app.retrieval`
 - `backend/app/auth.py`: imports `app.database`, `app.models`
-- `backend/app/browser_agent.py`: imports none (leaf module)
-- `backend/app/database.py`: imports none (leaf module)
+- `backend/app/database.py`: imports `alembic.command`, `alembic.config`, `app.models`
 - `backend/app/embeddings.py`: imports none (leaf module)
 - `backend/app/llm.py`: imports none (leaf module)
-- `backend/app/main.py`: imports `app.agent`, `app.auth`, `app.browser_agent`, `app.database`, `app.models`
+- `backend/app/main.py`: imports `app.agent`, `app.auth`, `app.database`, `app.models`
 - `backend/app/models.py`: imports none (leaf module)
 - `backend/app/reranker.py`: imports none (leaf module)
 - `backend/app/retrieval.py`: imports `app.embeddings`, `app.models`, `app.reranker`
 - `backend/scripts/add_fts.py`: imports `alembic.command`, `alembic.config`
 - `backend/scripts/ingest.py`: imports `ingestion.cli`
 - `backend/scripts/seed.py`: imports `seeding.load_curriculum`
+- `backend/scripts/ingestion/__init__.py`: imports `ingestion.chunking`, `ingestion.parsing`, `ingestion.pipeline`
 - `backend/scripts/ingestion/cli.py`: imports `ingestion.pipeline`
 - `backend/scripts/ingestion/pipeline.py`: imports `app.database`, `app.embeddings`, `app.models`, `ingestion.chunking`, `ingestion.console`, `ingestion.database`, `ingestion.parsing`, `ingestion.paths`
-- `backend/scripts/ingestion/database.py`: imports `app.database`, `app.models`
+- `backend/scripts/ingestion/database.py`: imports `app.database`, `ingestion.console`
 - `backend/scripts/ingestion/paths.py`: imports none (leaf module)
 - `backend/scripts/ingestion/console.py`: imports none (leaf module)
-- `backend/scripts/ingestion/parsing/parser.py`: imports `ingestion.parsing.cache`, `ingestion.parsing.config`, `ingestion.parsing.models`, `ingestion.parsing.pymupdf_parser`
+- `backend/scripts/ingestion/parsing/__init__.py`: imports `ingestion.parsing.models`, `ingestion.parsing.parser`
+- `backend/scripts/ingestion/parsing/parser.py`: imports `ingestion.parsing.cache`, `ingestion.parsing.models`, `ingestion.parsing.pymupdf_parser`
 - `backend/scripts/ingestion/parsing/pymupdf_parser.py`: imports `ingestion.parsing.models`
 - `backend/scripts/ingestion/parsing/cache.py`: imports `ingestion.parsing.config`, `ingestion.parsing.models`
 - `backend/scripts/ingestion/parsing/config.py`: imports `ingestion.paths`
 - `backend/scripts/ingestion/parsing/models.py`: imports none (leaf module)
+- `backend/scripts/ingestion/cleaning/__init__.py`: imports `ingestion.cleaning.instruction_plan`, `ingestion.cleaning.text`
 - `backend/scripts/ingestion/cleaning/instruction_plan.py`: imports `ingestion.cleaning.text`
 - `backend/scripts/ingestion/cleaning/text.py`: imports none (leaf module)
+- `backend/scripts/ingestion/chunking/__init__.py`: imports `ingestion.chunking.benefits`, `ingestion.chunking.chunk`, `ingestion.chunking.instruction_plan`, `ingestion.chunking.syllabus`
 - `backend/scripts/ingestion/chunking/chunk.py`: imports `ingestion.cleaning`, `ingestion.chunking.metadata`
 - `backend/scripts/ingestion/chunking/metadata.py`: imports none (leaf module)
 - `backend/scripts/ingestion/chunking/syllabus.py`: imports `ingestion.cleaning`, `ingestion.chunking.chunk`, `ingestion.chunking.metadata`
 - `backend/scripts/ingestion/chunking/instruction_plan.py`: imports `ingestion.cleaning`, `ingestion.chunking.chunk`, `ingestion.chunking.metadata`
 - `backend/scripts/ingestion/chunking/benefits.py`: imports `ingestion.chunking.chunk`, `ingestion.chunking.metadata`
+- `backend/scripts/seeding/__init__.py`: imports `seeding.load_curriculum`, `seeding.loaders`
 - `backend/scripts/seeding/load_curriculum.py`: imports `app.database`, `app.models`, `seeding.curriculum_data`, `seeding.loaders`
 - `backend/scripts/seeding/loaders.py`: imports `app.models`, `seeding.curriculum_data`
 - `backend/scripts/seeding/curriculum_data.py`: imports none (leaf module)
@@ -223,8 +223,8 @@ This document provides a factual, evidence-backed audit of the **CourseCompass**
 - `backend/alembic/versions/0001_baseline.py`: imports none (leaf module)
 - `backend/alembic/versions/0002_add_full_text_search.py`: imports `alembic`, `app.models`
 - `backend/alembic/versions/0003_page_number_nullable.py`: imports `alembic`, `sqlalchemy`
+- `backend/scripts/tools/__init__.py`: imports none (leaf module)
 - `backend/scripts/tools/dump_pdf_markdown.py`: imports none (leaf module)
-- `backend/tests/test_browser_automation.py`: imports `app.browser_agent`, `app.main`
 
 ---
 

@@ -255,7 +255,7 @@ Stores policy text and tabular criteria rows from the **Academic Benefits (EduRe
 | Column | Type | Indexing | Description |
 | :--- | :--- | :--- | :--- |
 | `id` | `INTEGER` | `PRIMARY KEY`, `AUTOINCREMENT` | Chunk ID |
-| `document_name`| `VARCHAR(255)` | — | Source document (`Academic Benefits.pdf`) |
+| `document_name`| `VARCHAR(255)` | — | Source document (`benefits_clean.md`) |
 | `section_title`| `VARCHAR(255)` | — | Scheme title (e.g., `Grade Upgradation`, `Duty Leave`) |
 | `page_number` | `INTEGER` | `NULL` allowed | Always `NULL` (the benefits markdown has no pages) |
 | `chunk_index` | `INTEGER` | — | Sequential index |
@@ -282,7 +282,7 @@ ON benefit_chunks USING hnsw (embedding vector_cosine_ops);
 - **Query performance**: Sub-10ms similarity queries across tens of thousands of chunks without scanning the whole table.
 
 ### 4.2 Full-Text Search (FTS) Indexing
-Lexical keyword matching uses PostgreSQL GIN indexes on automatically generated `tsvector` columns. The expression is defined once as `FTS_EXPRESSION` in `backend/app/models.py` (rendered on fresh databases by `create_all`) and applied to existing databases by `backend/alembic/versions/0002_add_full_text_search.py`:
+Lexical keyword matching uses PostgreSQL GIN indexes on automatically generated `tsvector` columns. The expression is defined once as `FTS_EXPRESSION` in `backend/app/models.py` (rendered on fresh databases by `create_all`) and applied to existing databases by `backend/alembic/versions/0002_add_full_text_search.py`; both run automatically at ingest/seed start through `upgrade_schema()` in `backend/app/database.py`:
 ```sql
 ALTER TABLE course_doc_chunks 
 ADD COLUMN IF NOT EXISTS fts tsvector 

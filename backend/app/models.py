@@ -239,7 +239,7 @@ class BenefitChunk(Base):
     document_name = Column(
         String(255),
         nullable=False,
-        default="Academic Benefits.pdf",
+        default="benefits_clean.md",
     )
 
     section_title = Column(String(255), nullable=True)

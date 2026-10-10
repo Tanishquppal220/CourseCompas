@@ -410,4 +410,4 @@ Here are 5 high-yield talking points connecting CourseCompass's implementation t
      - **Generation Metrics**:
        - *Faithfulness / Groundedness*: Verifies that every assertion made by `gpt-oss-120b` is mathematically and factually supported by the retrieved chunk content, penalizing ungrounded claims.
        - *Answer Relevance*: Ensures the agent directly answers the student's specific academic dilemma without dumping irrelevant policy sections.
-     - *Regression Testing*: Automated Playwright tests (`backend/tests/test_browser_automation.py`) and golden Q&A dataset regression runs ensure that prompt modifications or embedding model upgrades do not degrade retrieval recall on edge-case course codes.
+     - *Regression Testing*: Golden chunk-signature diffs of the ingestion chunkers (chunk content must stay byte-identical across refactors before a `--force-rebuild` re-ingest) and golden Q&A dataset regression runs ensure that prompt modifications, chunking changes, or embedding model upgrades do not degrade retrieval recall on edge-case course codes.
