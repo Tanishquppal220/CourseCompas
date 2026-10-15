@@ -38,8 +38,14 @@ def retrieve_syllabus_documents(
     """
     db = SessionLocal()
     try:
+        doc_type_filter = [doc_type] if doc_type else None
         docs = search_documents(
-            db, query, k=5, course_code=course_code, prefer_doc_type=doc_type
+            db,
+            query,
+            k=8,
+            course_code=course_code,
+            doc_types=doc_type_filter,
+            prefer_doc_type=doc_type,
         )
         if not docs:
             return "No relevant syllabus documents found."
@@ -276,6 +282,12 @@ def run_agent(
         "- RPL & Grade Upgradation: NO minimum CGPA required.\n\n"
         "CRITICAL INSTRUCTION: In LPU terminology, 'IP' stands for 'Instruction Plan' (course delivery plan "
         "and marks scheme). It NEVER refers to internet IP addresses.\n\n"
+        "SYLLABUS GROUNDING INSTRUCTION:\n"
+        "When asked about the syllabus, units, or topics of a course, always refer to the Course Overview chunk "
+        "and use the EXACT official course title from that chunk (e.g. 'CSE408: DESIGN AND ANALYSIS OF ALGORITHMS') "
+        "and its credit structure (L:T:P). NEVER substitute an informal or alternative course name. Enumerate only "
+        "the genuine Units (Units I through VI) found in the retrieved Syllabus chunks without hallucinating, "
+        "inventing missing units, or treating practical labs as units.\n\n"
         "CONVERSATIONAL ADVISING GUIDELINE:\n"
         "If the student's inquiry about a project, course, or internship lacks key details (stipend, duration, "
         "platform, proctored status, company tier), do NOT make assumptions or dump huge tables. "

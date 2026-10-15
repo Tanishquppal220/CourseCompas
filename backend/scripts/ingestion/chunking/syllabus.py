@@ -28,8 +28,17 @@ from .metadata import (
     SyllabusUnitMeta,
 )
 
-UNIT_MARKER_RE = re.compile(r"^Unit\s+([IVX]+)$")
-PRACTICAL_RE = re.compile(r"^\d{2}\.[^\d]")
+SECTION_SPLIT_RE = re.compile(
+    r"(?=\b(?:Unit\s+[IVX]+|Unit\s+\d+|Course Outcomes:|List of Practicals|List of Experiments|Text Books:|References:|CO\d+\s*::)\b)",
+    re.IGNORECASE,
+)
+UNIT_HEADER_RE = re.compile(
+    r"^Unit\s+([IVX]+|\d+)\b\s*[:\-–—]?\s*(.*)", re.IGNORECASE | re.DOTALL
+)
+PRACTICAL_LINE_RE = re.compile(
+    r"^(?:[-•*]\s*)?(?:\d{1,2}\.|\bPractical\s*\d+[:.]|\bExp(?:eriment)?\s*\d+[:.])\s*(.*)",
+    re.IGNORECASE,
+)
 TOPIC_SPLIT_RE = re.compile(
     r"^\s*([A-Za-z][A-Za-z0-9 &/()\-',.]{2,90}?)\s*[:：]\s*(.+)$", re.DOTALL
 )
@@ -96,8 +105,18 @@ def classify_syllabus(text_items) -> SyllabusSections:
     current_unit: int | None = None
     unit_buf: list = []  # (page, text) pending for the current unit
     in_refs = False
+    in_practicals = False
 
+    # Pre-segment inline section markers (e.g. Unit IV appearing without paragraph breaks)
+    raw_items = []
     for page, text in collect_cleaned_text_items(text_items):
+        parts = SECTION_SPLIT_RE.split(text)
+        for p in parts:
+            p_clean = p.strip()
+            if p_clean:
+                raw_items.append((page, p_clean))
+
+    for page, text in raw_items:
         lowered = text.lower()
 
         # Once references start, everything after belongs to them (sticky).
@@ -110,19 +129,12 @@ def classify_syllabus(text_items) -> SyllabusSections:
             sections.overview.append((page, text))
             continue
 
-        # Unit markers flip state and flush the previous unit's topic lines.
-        m = UNIT_MARKER_RE.match(text)
-        if m:
+        # Practicals header: "List of Practicals / Experiments:"
+        if "list of practical" in lowered or "list of experiment" in lowered:
             store_unit(sections, current_unit, unit_buf)
-            current_unit = ROMAN.get(m.group(1), None)
+            current_unit = None
             unit_buf = []
-            continue
-
-        # Practicals: "01. Write a program ..."
-        if PRACTICAL_RE.match(text) or re.match(r"^•\s*\d{2}\.", text):
-            sections.practicals.append((page, text))
-            continue
-        if "list of practical" in lowered:
+            in_practicals = True
             continue
 
         # Text books / references enter references mode.
@@ -130,8 +142,40 @@ def classify_syllabus(text_items) -> SyllabusSections:
             text.startswith(("Text Books", "References"))
             or "text books:" in text[:40].lower()
         ):
+            in_practicals = False
             in_refs = True
             sections.references.append((page, text))
+            continue
+
+        # Unit markers flip state and flush the previous unit's topic lines.
+        m_unit = UNIT_HEADER_RE.match(text)
+        if m_unit:
+            in_practicals = False
+            store_unit(sections, current_unit, unit_buf)
+            u_str = m_unit.group(1).upper()
+            current_unit = ROMAN.get(u_str, int(u_str) if u_str.isdigit() else None)
+            unit_buf = []
+            rem = m_unit.group(2).strip()
+            if rem:
+                unit_buf.append((page, rem))
+            continue
+
+        # When in practicals mode:
+        if in_practicals:
+            m_prac = PRACTICAL_LINE_RE.match(text)
+            if m_prac:
+                clean_prac = text.lstrip("-•* ").strip()
+                sections.practicals.append((page, clean_prac))
+                continue
+            elif text.startswith(("-", "•", "*")):
+                sections.practicals.append((page, text.lstrip("-•* ").strip()))
+                continue
+            elif text.startswith(("Session", "Page")):
+                continue
+
+        # Standalone numbered practical item outside explicit header
+        if PRACTICAL_LINE_RE.match(text):
+            sections.practicals.append((page, text.lstrip("-•* ").strip()))
             continue
 
         # Course outcomes block.
@@ -151,6 +195,7 @@ def classify_syllabus(text_items) -> SyllabusSections:
 
     store_unit(sections, current_unit, unit_buf)
     return sections
+
 
 
 def store_unit(sections: SyllabusSections, unit_num: int | None, unit_buf: list) -> None:

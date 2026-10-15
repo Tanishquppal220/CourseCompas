@@ -48,8 +48,10 @@ def count_document_chunks(db, code: str, doc_type: str) -> int:
     )
 
 
-def plan_course_docs(db, codes: list, force_rebuild: bool) -> list:
-    """Return (code, doc_type, document_name, pdf_path) for docs needing work."""
+def plan_course_docs(
+    db, codes: list, force_rebuild: bool, force_reparse: bool = False
+) -> list:
+    """Return (code, doc_type, document_name, pdf_path, use_cache) for docs needing work."""
     tasks = []
     for code in codes:
         for doc_type, pdf in (
@@ -59,7 +61,7 @@ def plan_course_docs(db, codes: list, force_rebuild: bool) -> list:
             if not pdf.exists():
                 continue
             if force_rebuild or count_document_chunks(db, code, doc_type) == 0:
-                tasks.append((code, doc_type, pdf.name, pdf))
+                tasks.append((code, doc_type, pdf.name, pdf, not force_reparse))
     return tasks
 
 
@@ -79,9 +81,13 @@ def parse_and_chunk_one(task):
     loaded per worker. Each file is handled by exactly one worker, so the
     per-file parse cache never sees concurrent writers.
     """
-    code, doc_type, doc_name, pdf = task
+    if len(task) == 5:
+        code, doc_type, doc_name, pdf, use_cache = task
+    else:
+        code, doc_type, doc_name, pdf = task
+        use_cache = True
     parsed = None
-    for _path, doc in batch_parse([pdf], use_cache=True, verbose=False):
+    for _path, doc in batch_parse([pdf], use_cache=use_cache, verbose=False):
         parsed = doc
     if parsed is None:
         return code, doc_type, doc_name, None
@@ -240,7 +246,9 @@ def run_ingestion(
             ingest_benefits(db, force_rebuild, continue_on_error=continue_on_error)
         else:
             codes = courses or available_courses()
-            tasks = plan_course_docs(db, codes, force_rebuild or force)
+            tasks = plan_course_docs(
+                db, codes, force_rebuild or force, force_reparse=force
+            )
             log(f"targeting {len(codes)} courses; {len(tasks)} doc(s) need work")
             run_course_ingest(tasks, workers, continue_on_error=continue_on_error)
             ingest_benefits(db, force_rebuild, continue_on_error=continue_on_error)

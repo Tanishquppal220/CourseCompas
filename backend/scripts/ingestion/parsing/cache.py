@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 # Bump when the shape or content of ParsedPdf changes, so stale caches are
 # ignored instead of feeding the chunkers outdated data.
-CACHE_VERSION = 3
+CACHE_VERSION = 4
 
 # Failures that mean "this cache file is unusable" (corrupt, moved module, or
 # unreadable). Anything else (e.g. a bug in a dataclass) should surface instead

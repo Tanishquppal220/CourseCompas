@@ -6,14 +6,26 @@ from pathlib import Path
 from .models import ParsedPdf, ParsedTable, cell_to_text
 
 
-def strip_markdown_tables(block: str) -> str:
-    """Remove markdown table lines from ``block``, keeping surrounding prose.
+def extract_markdown_table_cells(line: str) -> list[str]:
+    """Extract non-delimiter cell contents from a markdown table row."""
+    stripped = line.strip()
+    if not (stripped.startswith("|") and stripped.endswith("|")):
+        return [line]
+    cells = [
+        c.strip()
+        for c in stripped.split("|")
+        if c.strip() and not set(c.strip()).issubset({"-", ":", "|"})
+    ]
+    return cells
 
-    pymupdf4llm renders tables as markdown, but the same tables are extracted
-    separately into ``ParsedPdf.tables``. Dropping the markdown rows here stops
-    every table from being stored (and embedded) twice.
-    """
-    kept = [line for line in block.splitlines() if not line.strip().startswith("|")]
+
+def strip_markdown_tables(block: str) -> str:
+    """Remove pure table delimiter rows from ``block`` while preserving table cell prose."""
+    kept = []
+    for line in block.splitlines():
+        cells = extract_markdown_table_cells(line)
+        for cell in cells:
+            kept.append(cell)
     return "\n".join(kept).strip()
 
 
