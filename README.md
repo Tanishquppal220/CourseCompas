@@ -226,9 +226,9 @@ CourseCompass/
 │   ├── DATABASE_SCHEMA.md           # Database tables, models, indexes, and ERD
 │   ├── API_REFERENCE.md             # REST API specifications and curl examples
 │   ├── BENEFITS_AND_POLICIES.md     # LPU EduRevolution framework & benefit rules
-│   ├── dbml.md                      # DBML database representation
-│   └── walk.md                      # Relational migration walkthrough
-├── Tracker.md                       # Project progress log & architectural decisions
+│   ├── RAG_DEEPDIVE.md              # Hybrid retrieval, HNSW indexing & evaluation deep dive
+│   ├── METRICS.md                   # Repository technical audit and benchmarks
+│   └── Tracker.md                   # Project progress log & architectural decisions
 └── README.md                        # Master Project Documentation (This file)
 ```
 

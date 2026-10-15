@@ -197,23 +197,32 @@ CourseCompass uses a hybrid retrieval pipeline that blends semantic embeddings, 
 ```mermaid
 sequenceDiagram
     participant User as User / Agent Query
+    participant Cleaner as clean_query_for_fts
     participant Embedder as BGE-Small-EN Embedder
     participant DB as PostgreSQL 16
     participant Reranker as BGE Cross-Encoder
     participant LLM as Agent Context
 
-    User->>Embedder: Query string
+    User->>Cleaner: Natural language query string
+    Cleaner-->>User: (cleaned_text, detected_course_code)
+    User->>Embedder: Cleaned / natural query string
     Embedder-->>User: 384-dim Query Vector
     User->>DB: Cosine Distance (<=>) + FTS (websearch_to_tsquery @@ tsvector)
-    Note over DB: Computes Hybrid Score:<br/>(1.0 - distance) + ts_rank_cd * 0.5
-    DB-->>User: Top 15 Candidate Chunks
-    User->>Reranker: Pair [Query, Candidate Chunk Content]
+    Note over DB: Filters: course_code (if found) & Gating (dist < 0.6 OR fts @@ tsquery)<br/>Computes Hybrid Score:<br/>(1.0 - distance) + ts_rank_cd * 1.2
+    DB-->>User: Candidate Chunks (max(8, k * 2))
+    User->>Reranker: Pairs [Query, Candidate Chunk Content]
     Reranker-->>User: Cross-Encoder Relevance Scores
     Note over User: Sort by rerank_score desc
-    User-->>LLM: Top 5 Highest-Precision Chunks + Source Metadata
+    User-->>LLM: Top-k Precision Chunks + Source Metadata
 ```
 
-### 6.1 Dense Semantic Search
+### 6.1 Query Preprocessing & Distillation
+Before querying PostgreSQL, queries pass through `clean_query_for_fts` (`backend/app/retrieval.py`):
+- **Course Code Extraction**: Scans for standard 6-character course code patterns (e.g. `CSE205`, `INT108`). If found, it filters directly on `course_code`.
+- **Conversational Stop-Pattern Removal**: Strips filler phrases like *"what is"*, *"what topics are covered in"*, *"can you show me"*, *"tell me about"*, and punctuation.
+- **Fallback Recovery**: If a course code was inferred from natural language but returns 0 matches, the query automatically re-runs without the course constraint to prevent empty candidate lists.
+
+### 6.2 Dense Semantic Search
 - **Model**: `BAAI/bge-small-en-v1.5`
 - **Dimensions**: 384
 - **Vector Index**: HNSW index in PostgreSQL with `vector_cosine_ops`:
@@ -222,7 +231,7 @@ sequenceDiagram
   ON course_doc_chunks USING hnsw (embedding vector_cosine_ops);
   ```
 
-### 6.2 Lexical Full-Text Search (FTS)
+### 6.3 Lexical Full-Text Search (FTS)
 - **Engine**: Native PostgreSQL `tsvector` with English dictionary.
 - **Generated Column & GIN Index**:
   ```sql
@@ -234,15 +243,15 @@ sequenceDiagram
   ```
   The expression is single-sourced as `FTS_EXPRESSION` in `app/models.py` and applied by `alembic/versions/0002_add_full_text_search.py`.
 
-### 6.3 Hybrid Scoring Formula
-To balance keyword precision (course codes, specific terminology) and semantic context:
-$$\text{Score} = (1.0 - \text{CosineDistance}) + 0.5 \times \text{ts\_rank\_cd}(\text{fts}, \text{query})$$
+### 6.4 Hybrid Scoring Formula
+To balance keyword precision (course codes, specific terminology) and semantic context, CourseCompass uses a calibrated multiplier of $\alpha = 1.2$:
+$$\text{Score} = (1.0 - \text{CosineDistance}) + 1.2 \times \text{ts\_rank\_cd}(\text{fts}, \text{cleaned\_query})$$
 
-Only chunks satisfying either $(\text{CosineDistance} < 0.6)$ or $(\text{fts @@ tsquery})$ are retained as candidates, preventing irrelevant filler chunks.
+Only chunks satisfying either $(\text{CosineDistance} < 0.6)$ or $(\text{fts @@ tsquery})$ are retained as candidates, preventing irrelevant filler chunks from polluting the candidate pool.
 
-### 6.4 Cross-Encoder Reranking
+### 6.5 Cross-Encoder Reranking
 - **Model**: `BAAI/bge-reranker-base`
-- Passes `[query, chunk_content]` through a cross-encoder model to evaluate deep semantic interaction before returning the final top-$k$ (default 5) documents to the agent.
+- Evaluates `[query, chunk_content]` through a cross-encoder model to compute deep query-passage semantic relevance, ranking the candidate pool (`max(8, k * 2)`) down to the final top-$k$ returned to the agent.
 
 ---
 

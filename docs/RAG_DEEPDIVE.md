@@ -102,20 +102,22 @@ ON benefit_chunks
 USING GIN (fts);
 ```
 
-### 2.2 Exact Hybrid Scoring SQL Formula
-Implemented in `backend/app/retrieval.py` (Lines 33–51):
+### 2.2 Exact Hybrid Scoring SQL Formula & Query Cleaning
+Implemented in `backend/app/retrieval.py`:
 
 ```python
-# 1. Parse natural language query into tsquery
-tsquery = func.websearch_to_tsquery("english", query_text)
+# 1. Distill natural language query into keywords and extract course code (e.g., CSE205)
+cleaned_text, detected_code = clean_query_for_fts(query_text)
+tsquery = func.websearch_to_tsquery("english", cleaned_text)
 
 # 2. Vector distance (cosine distance between query vector and chunk embedding)
 distance = CourseDocumentChunk.embedding.cosine_distance(query_vector)
 
-# 3. Hybrid score combining cosine similarity and Cover Density ts_rank
-hybrid_score = (1.0 - distance) + func.coalesce(
-    func.ts_rank_cd(CourseDocumentChunk.fts, tsquery), 0.0
-) * 0.5
+# 3. Hybrid score combining cosine similarity and Cover Density ts_rank (HYBRID_ALPHA = 1.2)
+hybrid_score = (1.0 - distance) + (
+    func.coalesce(func.ts_rank_cd(CourseDocumentChunk.fts, tsquery), 0.0)
+    * 1.2
+)
 ```
 
 Equivalent raw SQL fragment:
@@ -123,7 +125,7 @@ Equivalent raw SQL fragment:
 SELECT 
     *,
     ((1.0 - (course_doc_chunks.embedding <=> :query_vector)) + 
-     (COALESCE(ts_rank_cd(course_doc_chunks.fts, websearch_to_tsquery('english', :query_text)), 0.0) * 0.5)) AS score
+     (COALESCE(ts_rank_cd(course_doc_chunks.fts, websearch_to_tsquery('english', :cleaned_text)), 0.0) * 1.2)) AS score
 FROM course_doc_chunks
 WHERE ...
 ORDER BY score DESC
@@ -131,9 +133,9 @@ LIMIT :k;
 ```
 
 #### Mathematical Formulation
-$$\text{HybridScore} = (1.0 - d_{\text{cosine}}) + 0.5 \times \text{ts\_rank\_cd}(\text{fts}, \text{tsquery})$$
+$$\text{HybridScore} = (1.0 - d_{\text{cosine}}) + 1.2 \times \text{ts\_rank\_cd}(\text{fts}, \text{cleaned\_tsquery})$$
 - Cosine distance $d_{\text{cosine}} \in [0, 2]$. Because embeddings are unit-normalized, $(1.0 - d_{\text{cosine}})$ maps to the cosine similarity $[-1, 1]$.
-- `ts_rank_cd` evaluates cover density: how close query terms appear to one another within the passage. Multiplying by a $0.5$ scaling factor balances lexical keyword boosts against the dense semantic base.
+- `ts_rank_cd` evaluates cover density: how close query terms appear to one another within the passage. A calibrated multiplier $\alpha = 1.2$ gives sufficient weight to exact keyword and phrase matches (e.g., assessment rubrics, course codes) without overpowering the semantic dense vector base.
 
 ### 2.3 The OR-Filter Condition (Relevance Gating)
 In standard RAG systems, querying for $k$ items always returns $k$ candidates, even if all $k$ items are completely irrelevant. To eliminate this failure mode, CourseCompass applies an explicit OR-filter gate (`backend/app/retrieval.py` Line 62 & Line 100):

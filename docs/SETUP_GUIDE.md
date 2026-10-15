@@ -127,10 +127,13 @@ pip install -e .
 
 ## 5. Database Seeding & Ingestion Pipeline
 
-To populate the curriculum tables in Neon, parse and embed course documents, and create the vector and Full-Text Search (FTS) indexes, execute the following 3 commands in order:
+To populate the curriculum tables, parse and embed course documents, and create the vector and Full-Text Search (FTS) indexes, execute the following commands in order.
+
+> [!IMPORTANT]
+> **Order of Execution**: `scripts/seed.py` MUST be executed before `scripts/ingest.py`. `course_doc_chunks.course_code` is a Foreign Key referencing `courses.code`. Ingesting course document PDFs before seeding the courses table will trigger foreign key integrity violations.
 
 ### Step 5.1: Seed Relational Curriculum Data
-Creates the relational tables in your Neon database and inserts programs, terms (Terms 1–8), 250+ courses, elective baskets, basket options, and term slots:
+Bootstraps the database schema (via `upgrade_schema()`), verifies Alembic migrations, and inserts lookup tables, terms (Terms 1–8), 250+ courses, elective baskets, basket options, and term slots:
 
 ```bash
 # Inside backend/
@@ -139,11 +142,8 @@ uv run python scripts/seed.py
 
 *Expected output:*
 ```text
-Table schema verified.
-Inserted 250 courses.
-Created 10 terms with term slots.
-Populated elective baskets and course basket mappings.
-Seed complete!
+Load complete.
+courses=250 terms=10 baskets=25 basket_options=287 term_slots=60
 ```
 
 ### Step 5.2: Ingest & Embed Academic Documents & Benefits

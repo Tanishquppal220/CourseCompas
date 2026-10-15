@@ -1,7 +1,7 @@
 # CourseCompass — Database Schema & Data Models
 
 CourseCompass utilizes **Neon Serverless PostgreSQL (PostgreSQL 16)** with the **`pgvector`** extension to store two complementary types of data:
-1. **Relational Data**: Highly structured academic records (programs, terms, courses, prerequisites, elective baskets, term slots, users, chat sessions, and messages).
+1. **Relational Data**: Structured academic curriculum records (terms, courses, elective baskets, basket options, term slots, users, chat sessions, and messages).
 2. **Unstructured / Vector & FTS Data**: Semantic text chunks with 384-dimensional dense vector embeddings and stored PostgreSQL `tsvector` columns for hybrid search.
 
 ---
@@ -13,14 +13,12 @@ erDiagram
     USERS ||--o{ CHAT_SESSIONS : owns
     CHAT_SESSIONS ||--o{ CHAT_MESSAGES : contains
 
-    PROGRAMS ||--o{ TERMS : structures
     TERMS ||--o{ TERM_SLOTS : defines
     TERMS ||--o{ ELECTIVE_BASKETS : offers
 
     COURSES ||--o{ TERM_SLOTS : assigned_to
     COURSES ||--o{ BASKET_OPTIONS : included_in
     COURSES ||--o{ COURSE_DOC_CHUNKS : documented_by
-    COURSES ||--o{ COURSE_PREREQUISITES : requires
 
     COURSE_TYPES ||--o{ TERM_SLOTS : classifies
     COURSE_NATURES ||--o{ TERM_SLOTS : categorizes
