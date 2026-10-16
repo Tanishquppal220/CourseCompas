@@ -1,0 +1,713 @@
+[
+  {
+    "chunk_index": 0,
+    "doc_type": "IP",
+    "chunk_type": "course_outcome",
+    "page": 1,
+    "section_title": "Course Outcomes",
+    "metadata": {
+      "co_num": 1
+    },
+    "content": "CO1 :: understand the time and space complexity of programs and data-structures."
+  },
+  {
+    "chunk_index": 1,
+    "doc_type": "IP",
+    "chunk_type": "course_outcome",
+    "page": 1,
+    "section_title": "Course Outcomes",
+    "metadata": {
+      "co_num": 2
+    },
+    "content": "CO2 :: illustrate the importance of Linked List in context of real world problems"
+  },
+  {
+    "chunk_index": 2,
+    "doc_type": "IP",
+    "chunk_type": "course_outcome",
+    "page": 1,
+    "section_title": "Course Outcomes",
+    "metadata": {
+      "co_num": 3
+    },
+    "content": "CO3 :: differentiate the Stack and Queue data structures for problem solving"
+  },
+  {
+    "chunk_index": 3,
+    "doc_type": "IP",
+    "chunk_type": "course_outcome",
+    "page": 1,
+    "section_title": "Course Outcomes",
+    "metadata": {
+      "co_num": 4
+    },
+    "content": "CO4 :: use of recursion in iteration process and tree data structure"
+  },
+  {
+    "chunk_index": 4,
+    "doc_type": "IP",
+    "chunk_type": "course_outcome",
+    "page": 1,
+    "section_title": "Course Outcomes",
+    "metadata": {
+      "co_num": 5
+    },
+    "content": "CO5 :: apply heap operations and hashing techniques for efficient data storage, retrieval, and collision resolution."
+  },
+  {
+    "chunk_index": 5,
+    "doc_type": "IP",
+    "chunk_type": "course_outcome",
+    "page": 1,
+    "section_title": "Course Outcomes",
+    "metadata": {
+      "co_num": 6
+    },
+    "content": "CO6 :: identify and integrating emerging data structures and algorithmic ensuring their ability to stay with technological advancements and maintain professional growth in a dynamic field"
+  },
+  {
+    "chunk_index": 6,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 2,
+    "section_title": "Rememberingbasic\nconceptsand\nalgorithmicnotations\nusedindata\nstructures\n,\ncomplexityof\nalgorithms",
+    "metadata": {
+      "week": 1,
+      "lecture": 1
+    },
+    "content": "Week: 1\nLecture: 1\nBroad Topic: Rememberingbasic\nconceptsand\nalgorithmicnotations\nusedindata\nstructures\n,\ncomplexityof\nalgorithms\nPedagogical Tool: Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 7,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 2,
+    "section_title": "Applicationsof\ndifferenttypesofdata\nstructuresandtime\nspacetradeoff",
+    "metadata": {
+      "week": 1,
+      "lecture": 2
+    },
+    "content": "Week: 1\nLecture: 2\nBroad Topic: Applicationsof\ndifferenttypesofdata\nstructuresandtime\nspacetradeoff\nLearning Outcomes: Understanding\nhowtoapply\nsuitabledata\nstructurefor\ngivenapplication Understanding\nhowtoapply\nsuitabledata\nstructurefor\ngivenapplication Understanding\nhowtoapply\nsuitabledata\nstructurefor\ngivenapplication Understanding\nhowtoapply\nsuitabledata\nstructurefor\ngivenapplication\nPedagogical Tool: Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 8,
+    "doc_type": "IP",
+    "chunk_type": "table_row",
+    "page": 2,
+    "section_title": "LTP Week Distribution",
+    "metadata": {},
+    "content": "LTPweekdistribution:(LTPWeeks); WeeksbeforeMTE | 7; WeeksAfterMTE | 7; SpillOver(Lecture) | 7"
+  },
+  {
+    "chunk_index": 9,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 4,
+    "section_title": "Applicationsof\ndifferenttypesofdata\nstructuresandtime\nspacetradeoff",
+    "metadata": {
+      "week": 1,
+      "lecture": 2
+    },
+    "content": "Week: 1\nLecture: 2\nBroad Topic: Applicationsof\ndifferenttypesofdata\nstructuresandtime\nspacetradeoff\nLearning Outcomes: Understanding\nhowtoapply\nsuitabledata\nstructurefor\ngivenapplication\nPedagogical Tool: Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 10,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 4,
+    "section_title": "traversal insertionand\n,\ndeletionoperationin\narrays",
+    "metadata": {
+      "week": 1,
+      "lecture": 3
+    },
+    "content": "Week: 1\nLecture: 3\nBroad Topic: traversal insertionand\n,\ndeletionoperationin\narrays\nPedagogical Tool: Arrays(Lineararrays:\nmemoryrepresentation) Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 11,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 4,
+    "section_title": "traversal insertionand\n,\ndeletionoperationin\narrays",
+    "metadata": {
+      "week": 2,
+      "lecture": 4
+    },
+    "content": "Week: 2\nLecture: 4\nBroad Topic: traversal insertionand\n,\ndeletionoperationin\narrays\nPedagogical Tool: Arrays(Lineararrays:\nmemoryrepresentation) Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 12,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 4,
+    "section_title": "Differencesbetween\nlinearandbinary\nsearchintermsof\ntheirapproach\n,\nefficiency anduse\n,\ncases",
+    "metadata": {
+      "week": 2,
+      "lecture": 5
+    },
+    "content": "Week: 2\nLecture: 5\nBroad Topic: Differencesbetween\nlinearandbinary\nsearchintermsof\ntheirapproach\n,\nefficiency anduse\n,\ncases\nPedagogical Tool: Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 13,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 4,
+    "section_title": "Analyzinghowto\napplyappropriate\nsortingalgorithmat\nappropriateplace",
+    "metadata": {
+      "week": 2,
+      "lecture": 6
+    },
+    "content": "Week: 2\nLecture: 6\nBroad Topic: Analyzinghowto\napplyappropriate\nsortingalgorithmat\nappropriateplace\nPedagogical Tool: Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 14,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 4,
+    "section_title": "Introductiontolinked\nlistanditscreation",
+    "metadata": {
+      "week": 3,
+      "lecture": 7
+    },
+    "content": "Week: 3\nLecture: 7\nBroad Topic: Introductiontolinked\nlistanditscreation\nPedagogical Tool: Understandinglinked\nrepresentationof\nmemoryanddynamic\nallocation Lecturecum\ndemonstration\n,\nbrainstorming Chain slides\n,\nmanagementin\npresentation"
+  },
+  {
+    "chunk_index": 15,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 6,
+    "section_title": "Introductiontolinked\nlistanditscreation",
+    "metadata": {
+      "week": 3,
+      "lecture": 7
+    },
+    "content": "Week: 3\nLecture: 7\nBroad Topic: Introductiontolinked\nlistanditscreation\nPedagogical Tool: LinkedLists(Memory\nrepresentation) Understandinglinked\nrepresentationof\nmemoryanddynamic\nallocation Lecturecum\ndemonstration\n,\nbrainstorming Chain slides\n,\nmanagementin\npresentation"
+  },
+  {
+    "chunk_index": 16,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 6,
+    "section_title": "Introductiontolinked\nlistanditscreation",
+    "metadata": {
+      "week": 3,
+      "lecture": 8
+    },
+    "content": "Week: 3\nLecture: 8\nBroad Topic: Introductiontolinked\nlistanditscreation\nPedagogical Tool: Understandinglinked\nrepresentationof\nmemoryanddynamic\nallocation Lecturecum\ndemonstration\n,\nbrainstorming Chain slides\n,\nmanagementin\npresentation"
+  },
+  {
+    "chunk_index": 17,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 6,
+    "section_title": "Introductiontolinked\nlistanditscreation",
+    "metadata": {
+      "week": 3,
+      "lecture": 9
+    },
+    "content": "Week: 3\nLecture: 9\nBroad Topic: Introductiontolinked\nlistanditscreation\nPedagogical Tool: Understandinglinked\nrepresentationof\nmemoryanddynamic\nallocation Lecturecum\ndemonstration\n,\nbrainstorming Chain slides\n,\nmanagementin\npresentation"
+  },
+  {
+    "chunk_index": 18,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 6,
+    "section_title": "Algorithmtotraverse\nanddeletenodesin\nlinkedlist",
+    "metadata": {
+      "week": 4,
+      "lecture": 10
+    },
+    "content": "Week: 4\nLecture: 10\nBroad Topic: Algorithmtotraverse\nanddeletenodesin\nlinkedlist\nPedagogical Tool: Understandinglinked\nrepresentationof\nmemoryanddynamic\nallocation Lecturecum\ndemonstration\n,\nbrainstorming Chain slides\n,\nmanagementin\npresentation"
+  },
+  {
+    "chunk_index": 19,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 6,
+    "section_title": "Analyzing\nmodificationinthe\ndesignoflinkedlist\ntoincreaseefficiency",
+    "metadata": {
+      "week": 4,
+      "lecture": 11
+    },
+    "content": "Week: 4\nLecture: 11\nBroad Topic: Analyzing\nmodificationinthe\ndesignoflinkedlist\ntoincreaseefficiency\nPedagogical Tool: Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 20,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 6,
+    "section_title": "Analyzing\nmodificationinthe\ndesignoflinkedlist\ntoincreaseefficiency",
+    "metadata": {
+      "week": 4,
+      "lecture": 12
+    },
+    "content": "Week: 4\nLecture: 12\nBroad Topic: Analyzing\nmodificationinthe\ndesignoflinkedlist\ntoincreaseefficiency\nPedagogical Tool: Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 21,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 6,
+    "section_title": "Analyzing\nmodificationinthe\ndesignoflinkedlist\ntoincreaseefficiency",
+    "metadata": {
+      "week": 5,
+      "lecture": 13
+    },
+    "content": "Week: 5\nLecture: 13\nBroad Topic: Analyzing\nmodificationinthe\ndesignoflinkedlist\ntoincreaseefficiency\nPedagogical Tool: Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 22,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 6,
+    "section_title": "Test Code based 1\n-",
+    "metadata": {
+      "week": 5,
+      "lecture": 14
+    },
+    "content": "Week: 5\nLecture: 14\nBroad Topic: Test Code based 1\n-"
+  },
+  {
+    "chunk_index": 23,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 6,
+    "section_title": "Understanding\nimplementationof\nstackusingarrayand\nlinkedlistasper\nLIFOarrangement",
+    "metadata": {
+      "week": 5,
+      "lecture": 15
+    },
+    "content": "Week: 5\nLecture: 15\nBroad Topic: Understanding\nimplementationof\nstackusingarrayand\nlinkedlistasper\nLIFOarrangement\nPedagogical Tool: Stacks(Introduction:List\nandArrayrepresentations\n,\nOperationsonstack\n(traversal pushandpop))\n, Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 24,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 8,
+    "section_title": "Stacks(Arithmetic\nexpressions:polishnotation\n,\nevaluationand\ntransformationof\nexpressions)\n.",
+    "metadata": {
+      "week": 6,
+      "lecture": 16
+    },
+    "content": "Week: 6\nLecture: 16\nBroad Topic: Stacks(Arithmetic\nexpressions:polishnotation\n,\nevaluationand\ntransformationof\nexpressions)\n.\nPedagogical Tool: Stackrepresentationof\narithmetic expressions\nexpressionusingstack Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 25,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 8,
+    "section_title": "Understanding\nmemorymanagement\nasperFIFO\narrangement",
+    "metadata": {
+      "week": 6,
+      "lecture": 17
+    },
+    "content": "Week: 6\nLecture: 17\nBroad Topic: Understanding\nmemorymanagement\nasperFIFO\narrangement\nPedagogical Tool: Queue(Arrayandlist\nrepresentation) Representationofqueue\nusingarraysandlinked\nlistandoperations Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 26,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 8,
+    "section_title": "Understanding\nmemorymanagement\nasperFIFO\narrangement",
+    "metadata": {
+      "week": 6,
+      "lecture": 18
+    },
+    "content": "Week: 6\nLecture: 18\nBroad Topic: Understanding\nmemorymanagement\nasperFIFO\narrangement\nPedagogical Tool: Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 27,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 8,
+    "section_title": "Understanding\nmemorymanagement\nasperFIFO\narrangement",
+    "metadata": {
+      "week": 7,
+      "lecture": 19
+    },
+    "content": "Week: 7\nLecture: 19\nBroad Topic: Understanding\nmemorymanagement\nasperFIFO\narrangement\nPedagogical Tool: Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 28,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 8,
+    "section_title": "SpillOver",
+    "metadata": {
+      "week": 7,
+      "lecture": 20
+    },
+    "content": "Week: 7\nLecture: 20\nBroad Topic: SpillOver"
+  },
+  {
+    "chunk_index": 29,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 8,
+    "section_title": "SpillOver",
+    "metadata": {
+      "week": 7,
+      "lecture": 21
+    },
+    "content": "Week: 7\nLecture: 21\nBroad Topic: SpillOver"
+  },
+  {
+    "chunk_index": 30,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 8,
+    "section_title": "Introductionofrecursion\nand problem of tower of\nHanoi",
+    "metadata": {
+      "week": 8,
+      "lecture": 22
+    },
+    "content": "Week: 8\nLecture: 22\nBroad Topic: Introductionofrecursion\nand problem of tower of\nHanoi\nPedagogical Tool: Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 31,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 8,
+    "section_title": "Usingrecursive\nsolutionsfordifferent\nproblems",
+    "metadata": {
+      "week": 8,
+      "lecture": 23
+    },
+    "content": "Week: 8\nLecture: 23\nBroad Topic: Usingrecursive\nsolutionsfordifferent\nproblems\nPedagogical Tool: Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 32,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 8,
+    "section_title": "Usingrecursive\nsolutionsfor\ndifferentproblems",
+    "metadata": {
+      "week": 8,
+      "lecture": 24
+    },
+    "content": "Week: 8\nLecture: 24\nBroad Topic: Usingrecursive\nsolutionsfor\ndifferentproblems\nPedagogical Tool: Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 33,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 8,
+    "section_title": "Remembering\nnonlinearmemory\narrangementsandits\napplications",
+    "metadata": {
+      "week": 9,
+      "lecture": 25
+    },
+    "content": "Week: 9\nLecture: 25\nBroad Topic: Remembering\nnonlinearmemory\narrangementsandits\napplications\nPedagogical Tool: Trees(Binarytrees:\nintroduction(completeand\nextendedbinarytrees)\n,\nmemoryrepresentation\n(linked sequential))\n, Introductiontotreedata\nstructureanditsmemory\nrepresentation Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 34,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 10,
+    "section_title": "Tree traversal basics: in-\norder and pre-order tree\ntraversalalgorithm",
+    "metadata": {
+      "week": 9,
+      "lecture": 26
+    },
+    "content": "Week: 9\nLecture: 26\nBroad Topic: Tree traversal basics: in-\norder and pre-order tree\ntraversalalgorithm\nPedagogical Tool: Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 35,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 10,
+    "section_title": "Treetraversalbasicsand\npost -order tree traversal\nalgorithm",
+    "metadata": {
+      "week": 9,
+      "lecture": 27
+    },
+    "content": "Week: 9\nLecture: 27\nBroad Topic: Treetraversalbasicsand\npost -order tree traversal\nalgorithm\nPedagogical Tool: Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 36,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 10,
+    "section_title": "Trees(BinarySearchTree:\nintroduction searching\n, ,\ninsertionanddeletion)",
+    "metadata": {
+      "week": 10,
+      "lecture": 28
+    },
+    "content": "Week: 10\nLecture: 28\nBroad Topic: Trees(BinarySearchTree:\nintroduction searching\n, ,\ninsertionanddeletion)\nPedagogical Tool: Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 37,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 10,
+    "section_title": "Test Code based 2\n-",
+    "metadata": {
+      "week": 10,
+      "lecture": 29
+    },
+    "content": "Week: 10\nLecture: 29\nBroad Topic: Test Code based 2\n-"
+  },
+  {
+    "chunk_index": 38,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 10,
+    "section_title": "Applyinganother\nrequirementtomake\nmoreefficient\narrangementofdata\ninnonlineardata\nstructure",
+    "metadata": {
+      "week": 10,
+      "lecture": 30
+    },
+    "content": "Week: 10\nLecture: 30\nBroad Topic: Applyinganother\nrequirementtomake\nmoreefficient\narrangementofdata\ninnonlineardata\nstructure\nPedagogical Tool: Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 39,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 10,
+    "section_title": "HeapsandHashing(Hashing\nintroduction:hashfunctions\n,\nhashtable)",
+    "metadata": {
+      "week": 11,
+      "lecture": 31
+    },
+    "content": "Week: 11\nLecture: 31\nBroad Topic: HeapsandHashing(Hashing\nintroduction:hashfunctions\n,\nhashtable)\nPedagogical Tool: Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 40,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 10,
+    "section_title": "Heapsand\nHashing(Openhashing\n(separatechaining))",
+    "metadata": {
+      "week": 11,
+      "lecture": 32
+    },
+    "content": "Week: 11\nLecture: 32\nBroad Topic: Heapsand\nHashing(Openhashing\n(separatechaining))\nPedagogical Tool: Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 41,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 10,
+    "section_title": "Heapsand\nHashing(Closed\nhashing(open\naddressing):linear\nprobing)",
+    "metadata": {
+      "week": 11,
+      "lecture": 33
+    },
+    "content": "Week: 11\nLecture: 33\nBroad Topic: Heapsand\nHashing(Closed\nhashing(open\naddressing):linear\nprobing)\nPedagogical Tool: Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 42,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 10,
+    "section_title": "Hashingtechniquesand\ncollisiondetection",
+    "metadata": {
+      "week": 12,
+      "lecture": 34
+    },
+    "content": "Week: 12\nLecture: 34\nBroad Topic: Hashingtechniquesand\ncollisiondetection\nPedagogical Tool: Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 43,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 12,
+    "section_title": "Hashingtechniquesand\ncollisiondetection",
+    "metadata": {
+      "week": 12,
+      "lecture": 34
+    },
+    "content": "Week: 12\nLecture: 34\nBroad Topic: Hashingtechniquesand\ncollisiondetection\nPedagogical Tool: Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 44,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 12,
+    "section_title": "Understandingnode\ntonodemovement\nwithingraphs",
+    "metadata": {
+      "week": 12,
+      "lecture": 35
+    },
+    "content": "Week: 12\nLecture: 35\nBroad Topic: Understandingnode\ntonodemovement\nwithingraphs\nPedagogical Tool: Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 45,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 12,
+    "section_title": "Understandingnode\ntonodemovement\nwithingraphs",
+    "metadata": {
+      "week": 12,
+      "lecture": 36
+    },
+    "content": "Week: 12\nLecture: 36\nBroad Topic: Understandingnode\ntonodemovement\nwithingraphs\nPedagogical Tool: Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 46,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 12,
+    "section_title": "Understandingnode\ntonodemovement\nwithingraphs",
+    "metadata": {
+      "week": 13,
+      "lecture": 37
+    },
+    "content": "Week: 13\nLecture: 37\nBroad Topic: Understandingnode\ntonodemovement\nwithingraphs\nPedagogical Tool: Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 47,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 12,
+    "section_title": "Test Code based 3\n-",
+    "metadata": {
+      "week": 13,
+      "lecture": 38
+    },
+    "content": "Week: 13\nLecture: 38\nBroad Topic: Test Code based 3\n-"
+  },
+  {
+    "chunk_index": 48,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 12,
+    "section_title": "Operationsongraphsand\nshortestpathalgorithm",
+    "metadata": {
+      "week": 13,
+      "lecture": 39
+    },
+    "content": "Week: 13\nLecture: 39\nBroad Topic: Operationsongraphsand\nshortestpathalgorithm\nPedagogical Tool: Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 49,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 12,
+    "section_title": "Operationsongraphsand\nshortestpathalgorithm",
+    "metadata": {
+      "week": 14,
+      "lecture": 40
+    },
+    "content": "Week: 14\nLecture: 40\nBroad Topic: Operationsongraphsand\nshortestpathalgorithm\nPedagogical Tool: Lecturecum\ndemonstration\n,\nbrainstorming"
+  },
+  {
+    "chunk_index": 50,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 12,
+    "section_title": "SpillOver",
+    "metadata": {
+      "week": 14,
+      "lecture": 41
+    },
+    "content": "Week: 14\nLecture: 41\nBroad Topic: SpillOver"
+  },
+  {
+    "chunk_index": 51,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 12,
+    "section_title": "SpillOver",
+    "metadata": {
+      "week": 14,
+      "lecture": 42
+    },
+    "content": "Week: 14\nLecture: 42\nBroad Topic: SpillOver"
+  },
+  {
+    "chunk_index": 52,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 12,
+    "section_title": "SpillOver",
+    "metadata": {
+      "week": 15,
+      "lecture": 43
+    },
+    "content": "Week: 15\nLecture: 43\nBroad Topic: SpillOver"
+  },
+  {
+    "chunk_index": 53,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 12,
+    "section_title": "SpillOver",
+    "metadata": {
+      "week": 15,
+      "lecture": 44
+    },
+    "content": "Week: 15\nLecture: 44\nBroad Topic: SpillOver"
+  },
+  {
+    "chunk_index": 54,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 12,
+    "section_title": "SpillOver",
+    "metadata": {
+      "week": 15,
+      "lecture": 45
+    },
+    "content": "Week: 15\nLecture: 45\nBroad Topic: SpillOver"
+  },
+  {
+    "chunk_index": 55,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 12,
+    "section_title": "SpillOver",
+    "metadata": {
+      "week": 14,
+      "lecture": 41
+    },
+    "content": "Week: 14\nLecture: 41\nBroad Topic: SpillOver"
+  },
+  {
+    "chunk_index": 56,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 12,
+    "section_title": "SpillOver",
+    "metadata": {
+      "week": 14,
+      "lecture": 42
+    },
+    "content": "Week: 14\nLecture: 42\nBroad Topic: SpillOver"
+  },
+  {
+    "chunk_index": 57,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 12,
+    "section_title": "SpillOver",
+    "metadata": {
+      "week": 15,
+      "lecture": 43
+    },
+    "content": "Week: 15\nLecture: 43\nBroad Topic: SpillOver"
+  },
+  {
+    "chunk_index": 58,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 12,
+    "section_title": "SpillOver",
+    "metadata": {
+      "week": 15,
+      "lecture": 44
+    },
+    "content": "Week: 15\nLecture: 44\nBroad Topic: SpillOver"
+  },
+  {
+    "chunk_index": 59,
+    "doc_type": "IP",
+    "chunk_type": "lecture",
+    "page": 12,
+    "section_title": "SpillOver",
+    "metadata": {
+      "week": 15,
+      "lecture": 45
+    },
+    "content": "Week: 15\nLecture: 45\nBroad Topic: SpillOver"
+  }
+]

@@ -1,5 +1,6 @@
 import json
 import re
+from collections import defaultdict
 from typing import Any
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
@@ -150,6 +151,91 @@ def query_curriculum_database(sql_query: str) -> str:
 
 
 @tool
+def get_open_minors_and_electives(
+    area_or_keyword: str | None = None,
+    basket_type: str = "open_minor",
+    limit: int = 15,
+) -> str:
+    """
+    Look up official LPU Open Minors, Engineering Minors, and Elective Tracks from the curriculum database.
+
+    MANDATORY: Use this tool WHENEVER a student asks about:
+    - What Open Minors (OM) are available at LPU
+    - Recommendations for non-technical or interdisciplinary minors (Design, Business, Management, Finance, Law, Psychology, etc.)
+    - Engineering Minors (EM) or Pathway Electives
+    - Real course codes, titles, and credit values in any minor or elective track
+
+    CRITICAL: NEVER invent course codes or subject names. Always query this tool to get real, official offerings.
+
+    Args:
+        area_or_keyword: Optional filter for elective area or subject keyword (e.g. "Management", "Design", "Finance", "AI", "Cyber", "Psychology", "Law").
+                         If None, returns a categorized summary of all available Open Minor areas with sample courses.
+        basket_type: "open_minor" (default), "engineering_minor", or "pathway".
+        limit: Max courses to return per area (default 15).
+    """
+    db = SessionLocal()
+    try:
+        basket_pattern = "%open minor%"
+        if basket_type == "engineering_minor":
+            basket_pattern = "%engineering minor%"
+        elif basket_type == "pathway":
+            basket_pattern = "%pathway%"
+
+        if area_or_keyword:
+            kw = area_or_keyword.strip()
+            query = text("""
+                SELECT ea.name as area_name, c.code, c.title, c.credits, c.lecture_hours, c.tutorial_hours, c.practical_hours
+                FROM basket_options bo
+                JOIN elective_baskets eb ON bo.basket_id = eb.id
+                JOIN courses c ON bo.course_id = c.id
+                JOIN elective_areas ea ON bo.elective_area_id = ea.id
+                WHERE eb.name ILIKE :bpat
+                  AND (ea.name ILIKE :kw OR c.title ILIKE :kw OR c.code ILIKE :kw)
+                ORDER BY ea.name, c.code
+                LIMIT :limit;
+            """)
+            rows = db.execute(query, {"bpat": basket_pattern, "kw": f"%{kw}%", "limit": limit}).fetchall()
+            if not rows:
+                return (
+                    f"No courses found matching keyword '{kw}' in {basket_type}. "
+                    "Call again with a broader keyword (e.g. 'Design', 'Management', 'Finance', 'AI') "
+                    "or leave empty to list all available tracks."
+                )
+
+            by_area = defaultdict(list)
+            for r in rows:
+                ltp = f"{r.lecture_hours}:{r.tutorial_hours}:{r.practical_hours}"
+                by_area[r.area_name].append(f"  * {r.code} - {r.title} | Credits: {r.credits} (LTP: {ltp})")
+
+            out = [f"### Official LPU {basket_type.replace('_', ' ').title()} Offerings for '{kw}':\n"]
+            for area, courses in by_area.items():
+                out.append(f"**Track: {area}**")
+                out.extend(courses)
+                out.append("")
+            return "\n".join(out)
+        else:
+            query = text("""
+                SELECT ea.name as area_name, COUNT(c.id) as course_count, string_agg(c.code || ': ' || c.title, '; ') as sample_courses
+                FROM basket_options bo
+                JOIN elective_baskets eb ON bo.basket_id = eb.id
+                JOIN courses c ON bo.course_id = c.id
+                JOIN elective_areas ea ON bo.elective_area_id = ea.id
+                WHERE eb.name ILIKE :bpat
+                GROUP BY ea.name
+                ORDER BY ea.name;
+            """)
+            rows = db.execute(query, {"bpat": basket_pattern}).fetchall()
+            out = [f"### Available Official LPU {basket_type.replace('_', ' ').title()} Tracks ({len(rows)} Total Tracks):\n"]
+            for r in rows:
+                samples = "; ".join(r.sample_courses.split("; ")[:3])
+                out.append(f"- **{r.area_name}** ({r.course_count} courses) -> e.g. {samples}")
+            out.append("\nTo see the full course list for any track, call this tool again with `area_or_keyword='<Track Name>'`.")
+            return "\n".join(out)
+    finally:
+        db.close()
+
+
+@tool
 def maximize_academic_benefits(achievements: str, courses: str) -> str:
     """
     Formulates an optimal EduRevolution benefit stacking strategy when a student has multiple achievements
@@ -254,6 +340,7 @@ def run_agent(
 
     # Define available tools
     tools = [
+        get_open_minors_and_electives,
         retrieve_syllabus_documents,
         retrieve_policy_benefits,
         maximize_academic_benefits,
@@ -282,6 +369,18 @@ def run_agent(
         "- RPL & Grade Upgradation: NO minimum CGPA required.\n\n"
         "CRITICAL INSTRUCTION: In LPU terminology, 'IP' stands for 'Instruction Plan' (course delivery plan "
         "and marks scheme). It NEVER refers to internet IP addresses.\n\n"
+        "CURRICULUM GROUNDING & ANTI-HALLUCINATION RULES:\n"
+        "- ZERO INVENTED CODES OR TITLES: You must NEVER invent or hallucinate course codes (e.g. BUSM101, CSE410) "
+        "or course titles. Every course code, elective track, minor, and credit count MUST come from a tool call "
+        "(`get_open_minors_and_electives`, `query_curriculum_database`, or `retrieve_syllabus_documents`). "
+        "If a course is not in the database, it DOES NOT EXIST at LPU.\n"
+        "- MANDATORY TOOL CALL FOR ELECTIVES & MINORS: Whenever a student asks about Open Minors, Engineering Minors, "
+        "Elective Baskets, or course recommendations, you MUST call `get_open_minors_and_electives` to retrieve genuine LPU tracks "
+        "and official course codes (e.g., UI/UX Design: IXD801, Product Design: PID801, Management: MKT202 / FIN212, "
+        "AI & ML: CSE273 / CSE274 / CSE470 / CSE471 / CSE472 / CSE473).\n"
+        "- ACCURATE CREDITS: Always quote the exact credit count returned by the database (typically 3.0 credits for Open Minor courses). "
+        "Never guess or state that minors are 2 credits unless verified from the retrieved record.\n"
+        "- NOT OFFERED HONESTY: If a student asks about a subject or code not offered at LPU, explicitly inform them that it is not in the curriculum.\n\n"
         "SYLLABUS GROUNDING INSTRUCTION:\n"
         "When asked about the syllabus, units, or topics of a course, always refer to the Course Overview chunk "
         "and use the EXACT official course title from that chunk (e.g. 'CSE408: DESIGN AND ANALYSIS OF ALGORITHMS') "

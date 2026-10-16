@@ -1,0 +1,266 @@
+[
+  {
+    "chunk_index": 0,
+    "doc_type": "Syllabus",
+    "chunk_type": "course_outcome",
+    "page": 1,
+    "section_title": "Course Outcomes",
+    "metadata": {
+      "co_num": 1
+    },
+    "content": "CO1 :: understand the time and space complexity of programs and data-structures."
+  },
+  {
+    "chunk_index": 1,
+    "doc_type": "Syllabus",
+    "chunk_type": "course_outcome",
+    "page": 1,
+    "section_title": "Course Outcomes",
+    "metadata": {
+      "co_num": 2
+    },
+    "content": "CO2 :: illustrate the importance of Linked List in context of real world problems"
+  },
+  {
+    "chunk_index": 2,
+    "doc_type": "Syllabus",
+    "chunk_type": "course_outcome",
+    "page": 1,
+    "section_title": "Course Outcomes",
+    "metadata": {
+      "co_num": 3
+    },
+    "content": "CO3 :: differentiate the Stack and Queue data structures for problem solving"
+  },
+  {
+    "chunk_index": 3,
+    "doc_type": "Syllabus",
+    "chunk_type": "course_outcome",
+    "page": 1,
+    "section_title": "Course Outcomes",
+    "metadata": {
+      "co_num": 4
+    },
+    "content": "CO4 :: use of recursion in iteration process and tree data structure"
+  },
+  {
+    "chunk_index": 4,
+    "doc_type": "Syllabus",
+    "chunk_type": "course_outcome",
+    "page": 1,
+    "section_title": "Course Outcomes",
+    "metadata": {
+      "co_num": 5
+    },
+    "content": "CO5 :: apply heap operations and hashing techniques for efficient data storage, retrieval, and collision resolution."
+  },
+  {
+    "chunk_index": 5,
+    "doc_type": "Syllabus",
+    "chunk_type": "course_outcome",
+    "page": 1,
+    "section_title": "Course Outcomes",
+    "metadata": {
+      "co_num": 6
+    },
+    "content": "CO6 :: identify and integrating emerging data structures and algorithmic ensuring their ability to stay with technological advancements and maintain professional growth in a dynamic field"
+  },
+  {
+    "chunk_index": 6,
+    "doc_type": "Syllabus",
+    "chunk_type": "unit",
+    "page": 1,
+    "section_title": "Introduction",
+    "metadata": {
+      "unit": 2,
+      "unit_label": "II"
+    },
+    "content": "Unit II\nIntroduction : Basic Concepts and Notations, Complexity analysis: time space and trade off, Omega Notation, Theta Notation, Big O notation, Basic Data Structures. Arrays : Linear arrays: memory representation, Array operations: traversal, insertion, deletion, sorting, searching and merging and their complexity analysis. Sorting and Searching : Bubble sort, Insertion sort, Selection sort, Searching: Linear Search and Binary Search Linked Lists : Introduction, Memory representation, Allocation, Traversal, Insertion, Deletion, Header linked lists: Grounded and Circular, Two-way lists: operations on two way linked lists"
+  },
+  {
+    "chunk_index": 7,
+    "doc_type": "Syllabus",
+    "chunk_type": "unit",
+    "page": 1,
+    "section_title": "Stacks",
+    "metadata": {
+      "unit": 3,
+      "unit_label": "III"
+    },
+    "content": "Unit III\nStacks : Introduction: List and Array representations, Operations on stack (traversal, push and pop), Arithmetic expressions: polish notation, evaluation and transformation of expressions. Queue : Array and list representation, operations (traversal, insertion and deletion), Priority Queues, Deques"
+  },
+  {
+    "chunk_index": 8,
+    "doc_type": "Syllabus",
+    "chunk_type": "unit",
+    "page": 1,
+    "section_title": "Trees",
+    "metadata": {
+      "unit": 4,
+      "unit_label": "IV"
+    },
+    "content": "Unit IV\nTrees : Binary trees: introduction (complete and extended binary trees), memory representation (linked, sequential), Binary Search Tree: introduction, searching, insertion and deletion, In-order traversal, Pre-order traversal, Post-order traversal using recursion Recursion : Introduction, Recursive implementation of Towers of Hanoi, Merge sort, Quick sort"
+  },
+  {
+    "chunk_index": 9,
+    "doc_type": "Syllabus",
+    "chunk_type": "unit",
+    "page": 1,
+    "section_title": "Heaps and Hashing",
+    "metadata": {
+      "unit": 6,
+      "unit_label": "VI"
+    },
+    "content": "Unit VI\nHeaps and Hashing : Heaps: Introduction, Insertion, Deletion, HeapSort, Hashing introduction: hash functions, hash table, Open hashing (separate chaining), Closed hashing (open addressing): linear probing, quadratic probing and double hashing Graphs : Graph Traversal: BFS, DFS, Shortest path algorithm: Dijkstra\u2019s Algorithm, Bellman-Ford Algorithm, Floyd Warshall Algorithm"
+  },
+  {
+    "chunk_index": 10,
+    "doc_type": "Syllabus",
+    "chunk_type": "course_overview",
+    "page": 1,
+    "section_title": "Course Overview",
+    "metadata": {},
+    "content": "CSE205:DATA STRUCTURES AND ALGORITHMS\nL:3 T:0 P:2 Credits:4\nArray\nSearching\nSorting\nLinked List\nDoubly Linked List\nStack\nQueues\nRecursions\nRecursive Sorting\nTree\nBinary Search Tree\nHeaps"
+  },
+  {
+    "chunk_index": 11,
+    "doc_type": "Syllabus",
+    "chunk_type": "practical",
+    "page": 1,
+    "section_title": "List of Practicals",
+    "metadata": {
+      "practical_no": 1
+    },
+    "content": "Program to implement insertion and deletion operations in arrays"
+  },
+  {
+    "chunk_index": 12,
+    "doc_type": "Syllabus",
+    "chunk_type": "practical",
+    "page": 1,
+    "section_title": "List of Practicals",
+    "metadata": {
+      "practical_no": 2
+    },
+    "content": "Program to implement different searching techniques - linear and binary search"
+  },
+  {
+    "chunk_index": 13,
+    "doc_type": "Syllabus",
+    "chunk_type": "practical",
+    "page": 1,
+    "section_title": "List of Practicals",
+    "metadata": {
+      "practical_no": 3
+    },
+    "content": "Program to implement different sorting techniques \u2013 bubble, selection and insertion sort"
+  },
+  {
+    "chunk_index": 14,
+    "doc_type": "Syllabus",
+    "chunk_type": "practical",
+    "page": 1,
+    "section_title": "List of Practicals",
+    "metadata": {
+      "practical_no": 4
+    },
+    "content": "Program to implement searching, insertion and deletion operations in linked list"
+  },
+  {
+    "chunk_index": 15,
+    "doc_type": "Syllabus",
+    "chunk_type": "practical",
+    "page": 1,
+    "section_title": "List of Practicals",
+    "metadata": {
+      "practical_no": 5
+    },
+    "content": "Program to implement searching, insertion and deletion operations in doubly linked list"
+  },
+  {
+    "chunk_index": 16,
+    "doc_type": "Syllabus",
+    "chunk_type": "practical",
+    "page": 1,
+    "section_title": "List of Practicals",
+    "metadata": {
+      "practical_no": 6
+    },
+    "content": "Program to implement push and pop operations in stacks using both arrays and linked list"
+  },
+  {
+    "chunk_index": 17,
+    "doc_type": "Syllabus",
+    "chunk_type": "practical",
+    "page": 1,
+    "section_title": "List of Practicals",
+    "metadata": {
+      "practical_no": 7
+    },
+    "content": "Program to implement enqueue and dequeue operations in queues using both arrays and linked list"
+  },
+  {
+    "chunk_index": 18,
+    "doc_type": "Syllabus",
+    "chunk_type": "practical",
+    "page": 1,
+    "section_title": "List of Practicals",
+    "metadata": {
+      "practical_no": 8
+    },
+    "content": "Program to demonstrate concept of recursions with problem of tower of Hanoi"
+  },
+  {
+    "chunk_index": 19,
+    "doc_type": "Syllabus",
+    "chunk_type": "practical",
+    "page": 1,
+    "section_title": "List of Practicals",
+    "metadata": {
+      "practical_no": 9
+    },
+    "content": "Program to implement recursive sorting techniques - merge sort, quick sort"
+  },
+  {
+    "chunk_index": 20,
+    "doc_type": "Syllabus",
+    "chunk_type": "practical",
+    "page": 1,
+    "section_title": "List of Practicals",
+    "metadata": {
+      "practical_no": 10
+    },
+    "content": "Program to create and traverse a binary tree recursively"
+  },
+  {
+    "chunk_index": 21,
+    "doc_type": "Syllabus",
+    "chunk_type": "practical",
+    "page": 1,
+    "section_title": "List of Practicals",
+    "metadata": {
+      "practical_no": 11
+    },
+    "content": "Program to implement insertion and deletion operations in BST"
+  },
+  {
+    "chunk_index": 22,
+    "doc_type": "Syllabus",
+    "chunk_type": "practical",
+    "page": 1,
+    "section_title": "List of Practicals",
+    "metadata": {
+      "practical_no": 12
+    },
+    "content": "Program to implement insertion and deletion operations in Heaps and Heap Sort"
+  },
+  {
+    "chunk_index": 23,
+    "doc_type": "Syllabus",
+    "chunk_type": "references",
+    "page": 1,
+    "section_title": "Text Books & References",
+    "metadata": {},
+    "content": "Text Books:\n1. DATA STRUCTURES by SEYMOUR LIPSCHUTZ, MCGRAW HILL EDUCATION\n- References: 1. DATA STRUCTURES AND ALGORITHMS by ALFRED V. AHO, JEFFREY D. ULLMAN AND JOHN E. HOPCROFT, PEARSON"
+  }
+]

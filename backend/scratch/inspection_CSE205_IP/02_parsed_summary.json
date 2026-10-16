@@ -1,0 +1,30 @@
+{
+  "text_items_count": 52,
+  "tables_count": 17,
+  "sample_table": [
+    [
+      "CourseCode",
+      "CourseTitle",
+      "Lectures",
+      "Tutorials",
+      "Practicals",
+      "Credits"
+    ],
+    [
+      "CSE205",
+      "DATASTRUCTURESANDALGORITHMS",
+      "3",
+      "0",
+      "2",
+      "4"
+    ],
+    [
+      "CourseWeightage",
+      "ATT:5 CA:50 ETP:45"
+    ],
+    [
+      "CourseFocus",
+      "EMPLOYABILITYSKILLDEVELOPMENT\n,"
+    ]
+  ]
+}

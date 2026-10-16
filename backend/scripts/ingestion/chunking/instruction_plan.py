@@ -33,6 +33,7 @@ LECTURE_RE = re.compile(r"\bLecture\s*(\d+)", re.IGNORECASE)
 REF_CODE_RE = re.compile(r"^(T|R)\s?-\s?\d+", re.IGNORECASE)
 SINGLE_LABEL_RE = re.compile(r"^(Week|Lecture)$", re.IGNORECASE)
 SPILL_WORDS = {"spill", "spill over", "over"}
+COURSE_WEIGHTAGE_RE = re.compile(r"Course\s*Weightage", re.IGNORECASE)
 
 
 class TableKind:
@@ -72,7 +73,7 @@ def classify_tables(tables) -> TableClaims:
 
     # Course overview: only the first table with code + weightage.
     for ti, joined in enumerate(joineds):
-        if "Course Weightage" in joined and COURSE_CODE_RE.search(joined):
+        if COURSE_WEIGHTAGE_RE.search(joined) and COURSE_CODE_RE.search(joined):
             kinds[ti].add(TableKind.OVERVIEW)
             break
 
