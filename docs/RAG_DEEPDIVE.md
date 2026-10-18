@@ -132,8 +132,9 @@ ORDER BY score DESC
 LIMIT :k;
 ```
 
-#### Mathematical Formulation
-$$\text{HybridScore} = (1.0 - d_{\text{cosine}}) + 1.2 \times \text{ts\_rank\_cd}(\text{fts}, \text{cleaned\_tsquery})$$
+```sql
+HybridScore = (1.0 - d_cosine) + 1.2 * ts_rank_cd(fts, cleaned_tsquery)
+```
 - Cosine distance $d_{\text{cosine}} \in [0, 2]$. Because embeddings are unit-normalized, $(1.0 - d_{\text{cosine}})$ maps to the cosine similarity $[-1, 1]$.
 - `ts_rank_cd` evaluates cover density: how close query terms appear to one another within the passage. A calibrated multiplier $\alpha = 1.2$ gives sufficient weight to exact keyword and phrase matches (e.g., assessment rubrics, course codes) without overpowering the semantic dense vector base.
 

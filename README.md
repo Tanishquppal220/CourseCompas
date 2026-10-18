@@ -76,7 +76,9 @@ Every major architectural choice in CourseCompass was driven by a concrete failu
 
 ### 2. Hybrid Retrieval with Relevance Gating vs. Pure Vector Search
 * **The Decision**: Combined dense embeddings (`BAAI/bge-small-en-v1.5`, 384 dimensions) with PostgreSQL native Full-Text Search (`tsvector` + GIN indexes) into a unified scoring function in PostgreSQL:
-  $$\text{HybridScore} = (1.0 - \text{CosineDistance}) + 1.2 \times \text{ts\_rank\_cd}(\text{fts}, \text{query})$$
+  ```sql
+  HybridScore = (1.0 - CosineDistance) + 1.2 * ts_rank_cd(fts, query)
+  ```
 * **Why**: Course codes like `CSE205` (Data Structures) and `CSE202` (Object-Oriented Programming) have nearly identical dense embeddings in vector space despite being entirely different courses. The lexical GIN index provides exact keyword grounding.
 * **The Relevance Firewall**: In standard RAG, requesting `top_k=5` always returns 5 chunks, even if the database contains zero relevant documents. CourseCompass inserts an explicit OR-filter gate:
   ```python

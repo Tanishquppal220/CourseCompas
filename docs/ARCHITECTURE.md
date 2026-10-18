@@ -244,8 +244,9 @@ Before querying PostgreSQL, queries pass through `clean_query_for_fts` (`backend
   The expression is single-sourced as `FTS_EXPRESSION` in `app/models.py` and applied by `alembic/versions/0002_add_full_text_search.py`.
 
 ### 6.4 Hybrid Scoring Formula
-To balance keyword precision (course codes, specific terminology) and semantic context, CourseCompass uses a calibrated multiplier of $\alpha = 1.2$:
-$$\text{Score} = (1.0 - \text{CosineDistance}) + 1.2 \times \text{ts\_rank\_cd}(\text{fts}, \text{cleaned\_query})$$
+```sql
+Score = (1.0 - CosineDistance) + 1.2 * ts_rank_cd(fts, cleaned_query)
+```
 
 Only chunks satisfying either $(\text{CosineDistance} < 0.6)$ or $(\text{fts @@ tsquery})$ are retained as candidates, preventing irrelevant filler chunks from polluting the candidate pool.
 
