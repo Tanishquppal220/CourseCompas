@@ -1,0 +1,188 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="440" viewBox="0 0 1200 440" role="img" aria-labelledby="hero-title hero-desc">
+  <title id="hero-title">CourseCompass — Autonomous AI Academic Advisor &amp; Hybrid RAG Engine</title>
+  <desc id="hero-desc">CourseCompass bridges disconnected syllabi, instruction plans, and complex academic benefit policies through document-aware chunking, hybrid vector search, and consultative agentic advising.</desc>
+
+  <defs>
+    <!-- Background Linear Gradient -->
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#141312"/>
+      <stop offset="50%" stop-color="#0f0f10"/>
+      <stop offset="100%" stop-color="#0a0a0b"/>
+    </linearGradient>
+
+    <!-- Card Background Gradient -->
+    <linearGradient id="card-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1c1a18"/>
+      <stop offset="100%" stop-color="#131211"/>
+    </linearGradient>
+
+    <!-- Coral Brand Accent Gradient -->
+    <linearGradient id="coral-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#d97757"/>
+      <stop offset="100%" stop-color="#e28c68"/>
+    </linearGradient>
+
+    <!-- Subtle Grid Pattern -->
+    <pattern id="grid-pattern" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#ffffff" stroke-width="1" stroke-opacity="0.025"/>
+    </pattern>
+  </defs>
+
+  <!-- Canvas Container with Rounded Border -->
+  <rect width="1200" height="440" rx="20" fill="url(#bg-grad)"/>
+  <rect width="1200" height="440" rx="20" fill="url(#grid-pattern)"/>
+  <rect width="1198" height="438" x="1" y="1" rx="19" fill="none" stroke="#2e2b27" stroke-width="1.5"/>
+
+  <!-- LEFT COLUMN: Brand, Value Proposition & Capabilities -->
+  <g id="left-column" transform="translate(56, 44)">
+    
+    <!-- Category Eyebrow Pill -->
+    <g id="category-pill">
+      <rect width="320" height="28" rx="14" fill="#261b17" stroke="#663c2c" stroke-width="1"/>
+      <circle cx="14" cy="14" r="4" fill="#e07a5f"/>
+      <text x="26" y="18" fill="#e89379" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="700" letter-spacing="1">ENTERPRISE ACADEMIC ADVISOR</text>
+    </g>
+
+    <!-- Title & Compass Motif -->
+    <g id="title-block" transform="translate(0, 72)">
+      <text x="0" y="0" fill="#faf9f5" font-family="Georgia, Cambria, 'Times New Roman', serif" font-size="44" font-weight="700" letter-spacing="-0.5">CourseCompass</text>
+      <!-- Coral compass needle / indicator mark -->
+      <polygon points="340,-26 348,-6 340,-12 332,-6" fill="#e07a5f"/>
+      <polygon points="340,4 348,-16 340,-10 332,-16" fill="#663c2c"/>
+    </g>
+
+    <!-- Pitch / One-Sentence Promise -->
+    <text x="0" y="112" fill="#c4bfb6" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="15" font-weight="400" line-height="24">
+      <tspan x="0" dy="0">Autonomous academic advising engine connecting 250+ courses,</tspan>
+      <tspan x="0" dy="24">75+ syllabi &amp; instruction plans, and 8 complex policy matrices</tspan>
+      <tspan x="0" dy="24">through hybrid retrieval and consultative reasoning.</tspan>
+    </text>
+
+    <!-- 3 Core Engineering Pillars -->
+    <g id="feature-pillars" transform="translate(0, 196)">
+      <!-- Item 1 -->
+      <g transform="translate(0, 0)">
+        <rect width="154" height="68" rx="10" fill="#181715" stroke="#2c2825" stroke-width="1"/>
+        <text x="14" y="24" fill="#e07a5f" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="700">01 / CHUNKING</text>
+        <text x="14" y="44" fill="#faf9f5" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12" font-weight="600">Document-Aware</text>
+        <text x="14" y="58" fill="#8c857b" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11">Structural parsing</text>
+      </g>
+      <!-- Item 2 -->
+      <g transform="translate(164, 0)">
+        <rect width="154" height="68" rx="10" fill="#181715" stroke="#2c2825" stroke-width="1"/>
+        <text x="14" y="24" fill="#e07a5f" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="700">02 / RETRIEVAL</text>
+        <text x="14" y="44" fill="#faf9f5" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12" font-weight="600">Hybrid + Rerank</text>
+        <text x="14" y="58" fill="#8c857b" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11">HNSW + FTS + BGE</text>
+      </g>
+      <!-- Item 3 -->
+      <g transform="translate(328, 0)">
+        <rect width="166" height="68" rx="10" fill="#181715" stroke="#2c2825" stroke-width="1"/>
+        <text x="14" y="24" fill="#e07a5f" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="700">03 / ADVISING</text>
+        <text x="14" y="44" fill="#faf9f5" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12" font-weight="600">Consultative Loop</text>
+        <text x="14" y="58" fill="#8c857b" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11">Clarifies before solving</text>
+      </g>
+    </g>
+
+    <!-- Bottom Tech Badges -->
+    <g id="tech-tags" transform="translate(0, 310)">
+      <text x="0" y="16" fill="#756f66" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" letter-spacing="1">STACK:</text>
+      <g transform="translate(56, 0)">
+        <rect width="84" height="24" rx="6" fill="#181716" stroke="#2e2b27" stroke-width="1"/>
+        <text x="10" y="16" fill="#c4bfb6" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11.5" font-weight="500">FastAPI 0.14+</text>
+      </g>
+      <g transform="translate(148, 0)">
+        <rect width="72" height="24" rx="6" fill="#181716" stroke="#2e2b27" stroke-width="1"/>
+        <text x="10" y="16" fill="#c4bfb6" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11.5" font-weight="500">React 19</text>
+      </g>
+      <g transform="translate(228, 0)">
+        <rect width="108" height="24" rx="6" fill="#181716" stroke="#2e2b27" stroke-width="1"/>
+        <text x="10" y="16" fill="#c4bfb6" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11.5" font-weight="500">Neon pgvector</text>
+      </g>
+      <g transform="translate(344, 0)">
+        <rect width="90" height="24" rx="6" fill="#181716" stroke="#2e2b27" stroke-width="1"/>
+        <text x="10" y="16" fill="#c4bfb6" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11.5" font-weight="500">LangChain</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- RIGHT COLUMN: Interactive Card Proof (Consultative Dialog Specimen) -->
+  <g id="right-column" transform="translate(600, 36)">
+    <!-- Terminal / Chat Mockup Window -->
+    <rect width="544" height="368" rx="14" fill="url(#card-grad)" stroke="#2e2b27" stroke-width="1.5"/>
+    
+    <!-- Window Title Bar -->
+    <rect width="544" height="38" rx="14" fill="#1a1816"/>
+    <rect width="544" height="14" y="24" fill="#1a1816"/>
+    <line x1="0" y1="38" x2="544" y2="38" stroke="#2a2725" stroke-width="1"/>
+
+    <!-- Window Dots -->
+    <circle cx="22" cy="19" r="5" fill="#e06c75" opacity="0.8"/>
+    <circle cx="38" cy="19" r="5" fill="#e5c07b" opacity="0.8"/>
+    <circle cx="54" cy="19" r="5" fill="#98c379" opacity="0.8"/>
+    <text x="74" y="23" fill="#8c857b" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11">coursecompass — consultative_advising</text>
+    
+    <!-- Real-time Status Badge in Window -->
+    <rect x="424" y="10" width="106" height="18" rx="9" fill="#1c2b20" stroke="#2a4d33" stroke-width="1"/>
+    <circle cx="434" cy="19" r="3.5" fill="#4ade80"/>
+    <text x="444" y="23" fill="#86efac" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9.5" font-weight="600">AGENT ACTIVE</text>
+
+    <!-- Student Input Bubble -->
+    <g transform="translate(20, 52)">
+      <!-- Student Label -->
+      <text x="2" y="12" fill="#756f66" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="600">STUDENT (Term 5 · B.Tech CSE · CGPA 7.9)</text>
+      <!-- Query Box -->
+      <rect y="18" width="504" height="42" rx="8" fill="#24211e" stroke="#38332d" stroke-width="1"/>
+      <text x="14" y="44" fill="#faf9f5" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13" font-weight="500">"I completed a 3-month startup internship. Am I eligible for any benefit?"</text>
+    </g>
+
+    <!-- Advisor Response Bubble (The Consultative Cross-Examination) -->
+    <g transform="translate(20, 130)">
+      <!-- Advisor Label -->
+      <g transform="translate(2, 0)">
+        <polygon points="0,0 8,5 0,10" fill="#e07a5f"/>
+        <text x="16" y="8" fill="#e07a5f" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10.5" font-weight="700">COURSECOMPASS ADVISOR (ReAct Loop)</text>
+      </g>
+      
+      <!-- Response Body Box -->
+      <rect y="16" width="504" height="152" rx="8" fill="#161514" stroke="#332f2a" stroke-width="1"/>
+      <!-- Accent bar on left -->
+      <rect y="16" width="3.5" height="152" rx="1.75" fill="#e07a5f"/>
+
+      <text x="16" y="38" fill="#d6d1c7" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12.5" font-weight="500">
+        <tspan x="16" dy="0">Identified candidate pathway: <tspan fill="#faf9f5" font-weight="700">Scheme 4 (Internship Benefit Policy)</tspan>.</tspan>
+        <tspan x="16" dy="20" fill="#a8a297">To compute your exact letter grade jump or CA waiver, please clarify:</tspan>
+      </text>
+
+      <!-- Numbered Questions -->
+      <g transform="translate(16, 80)">
+        <!-- Q1 -->
+        <rect width="18" height="18" rx="4" fill="#2b1e19"/>
+        <text x="5.5" y="13.5" fill="#e07a5f" font-family="ui-monospace, SFMono-Regular, monospace" font-size="10.5" font-weight="700">1</text>
+        <text x="26" y="13.5" fill="#faf9f5" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12">Duration: Total weeks completed (e.g. 12 weeks vs 6 months)?</text>
+
+        <!-- Q2 -->
+        <g transform="translate(0, 24)">
+          <rect width="18" height="18" rx="4" fill="#2b1e19"/>
+          <text x="5.5" y="13.5" fill="#e07a5f" font-family="ui-monospace, SFMono-Regular, monospace" font-size="10.5" font-weight="700">2</text>
+          <text x="26" y="13.5" fill="#faf9f5" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12">Stipend: Exact monthly stipend (e.g. ₹12,000/mo or unpaid)?</text>
+        </g>
+
+        <!-- Q3 -->
+        <g transform="translate(0, 48)">
+          <rect width="18" height="18" rx="4" fill="#2b1e19"/>
+          <text x="5.5" y="13.5" fill="#e07a5f" font-family="ui-monospace, SFMono-Regular, monospace" font-size="10.5" font-weight="700">3</text>
+          <text x="26" y="13.5" fill="#faf9f5" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12">Company Category: DPIIT registered startup, Tier-1, or Tier-2?</text>
+        </g>
+      </g>
+    </g>
+
+    <!-- Pipeline Telemetry Trace Bar -->
+    <g transform="translate(20, 314)">
+      <rect width="504" height="38" rx="6" fill="#11100f" stroke="#262320" stroke-width="1"/>
+      <circle cx="16" cy="19" r="4" fill="#38bdf8"/>
+      <text x="28" y="23" fill="#94a3b8" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10.5">
+        <tspan fill="#38bdf8">HYBRID GATE:</tspan> 14 candidates | <tspan fill="#a78bfa">BGE-RERANK:</tspan> Top 3 (Score: 0.892)
+      </text>
+    </g>
+  </g>
+</svg>
