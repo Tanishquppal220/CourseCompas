@@ -13,7 +13,7 @@
 [![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev)
 [![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
 
-**CourseCompass** is an enterprise-grade AI Academic Advisor and Retrieval-Augmented Generation (RAG) platform. It unifies scattered university course documents, relational degree structures, and multi-dimensional academic policy matrices into a consultative advising system.
+**CourseCompass** is a full-stack, working AI Academic Advisor prototype and Retrieval-Augmented Generation (RAG) platform. It unifies scattered university course documents, relational degree structures, and multi-dimensional academic policy matrices into a consultative advising system.
 
 [The Engineering Story](#-the-engineering-story) • [Design Decisions](#-key-design-decisions--architectural-trade-offs) • [Architecture](#-system-architecture) • [Consultative Advising](#-how-it-works-the-consultative-protocol-in-action) • [Quick Start](#-quick-start) • [Documentation Hub](#-documentation-hub)
 
@@ -24,11 +24,12 @@
 ## 📖 The Engineering Story
 
 ### The Problem: Academic Fragmentation at University Scale
-At large academic institutions like Lovely Professional University (LPU), students navigate an intricate curriculum across 8 semesters containing over 250+ courses and multiple elective baskets. However, the critical knowledge students need to succeed is split across three incompatible silos:
+At large academic institutions like Lovely Professional University (LPU), students navigate an intricate curriculum across 8 semesters containing 250 courses and dozens of elective baskets. However, the critical knowledge students need to succeed is split across several disconnected silos:
 
 1. **Curriculum Relational Data**: Term sequences, course credits, prerequisite trees, and elective basket rules buried in academic structure handbooks.
 2. **Dual Unstructured Course Documents**: High-level **Syllabus** outlines (containing course objectives and textbooks) are completely separate from operational **Instruction Plans (IP)** (which contain 20+ page tabular breakdowns of weekly lectures, Continuous Assessment (CA) weightages, and midterm schemes).
 3. **The EduRevolution Policy Matrix**: A 25KB multi-tiered policy governing **8 distinct academic benefit schemes** (awarding letter grade jumps, 10% attendance relaxations, and CA waivers for internships, patents, hackathons, and research publications). Determining eligibility requires cross-referencing multi-variable matrices (e.g., `Stipend × Duration × Company Tier × Student CGPA`).
+4. **The Elective Dilemma (Baskets vs. Floated Courses)**: At course registration, LPU students do not pick specific courses — they select only an **Elective Category or Basket** (e.g., *Department Elective 1 - Artificial Intelligence*, *Engineering Minor*, or *Open Minor*), while the university dynamically assigns and floats the actual course offering each academic year based on faculty scheduling and cohort sizing. Students are forced to make specialization commitments without knowing which specific subjects, credit distributions, or prerequisites will actually be assigned to them.
 
 ### The Human Breakdown
 When students consult traditional university portals or generic LLMs:
@@ -37,10 +38,17 @@ When students consult traditional university portals or generic LLMs:
 - **Premature Assumptions & Policy Dumps**: When an eager student asks *"I did an internship, what benefit do I get?"*, a naive bot either dumps a 40-row policy matrix or hallucinates a generic congratulatory answer without checking if the internship was 4 weeks or 6 months, paid or unpaid.
 
 ### The CourseCompass Approach
-CourseCompass was built from the ground up as a **consultative engineering system**:
+CourseCompass was built from the ground up as a **consultative engineering prototype**:
 - Instead of treating every PDF the same, it employs **document-aware structural parsers**.
 - Instead of relying solely on vector similarity, it implements **hybrid vector-lexical scoring with an OR-filter relevance gate**.
 - Instead of single-turn question-answering, it follows a **ReAct consultative advising protocol** that cross-examines ambiguous inquiries before rendering deterministic verdicts.
+- To resolve the elective dilemma, it queries the relational schema (`term_slots` → `elective_baskets` → `basket_options` → `courses`) to unpack every candidate course under an elective area, providing students with full L-T-P credit breakdowns and syllabus previews before the university announces the final floated course.
+
+### Transparent Document Coverage: Relational Catalog vs. Deep Text
+To ensure clear evaluation boundaries, CourseCompass explicitly separates high-level degree structures from deep document retrieval:
+- **Full Relational Catalog (250 Courses, Terms 1–8)**: Complete relational coverage in PostgreSQL of all core courses, discipline electives, open minors, credit distributions (L-T-P), contact hours, and slot-to-basket mappings.
+- **Deep Dual-Document Coverage (36 Core Courses)**: Ingested, chunked, and embedded with both official Syllabus outlines (topics, objectives, textbooks) and operational 20+ page Instruction Plans (weekly lecture topics, CA rubrics, and exam weightages).
+- **Structural-Only Courses (212 Courses)**: Fully queryable for credits, prerequisites, slot assignments, and elective basket membership via SQL; if a student asks for granular lecture-by-lecture syllabus details on these courses, the advisor transparently clarifies that only relational metadata is currently on file rather than hallucinating course content.
 
 ---
 
@@ -62,6 +70,7 @@ Every major architectural choice in CourseCompass was driven by a concrete failu
 ```
 
 ### 1. Document-Aware Structural Chunking vs. Sliding Window
+* **Upstream Parsing & Selective OCR**: The source PDFs are partly scanned, so ingestion runs PyMuPDF4LLM with RapidOCR (OCR only on pages that need it), cleans boilerplate, then parses the text into typed structures before chunking. Chunk quality depends on OCR quality, so parsing is the first step, not an afterthought.
 * **The Decision**: Banned arbitrary sliding-window token chunking (`chunk_size=500, overlap=50`). Implemented specialized document parsers in `backend/scripts/ingestion/chunking/` with an 11-member `chunk_type` taxonomy.
 * **Why**: Instruction plans are dense 20-page tables. A sliding window splits rows mid-cell, separating lecture topics from their evaluation weightage. The IP parser uses state-machine cell classification (`classify_lecture_cells`) to preserve table hierarchy. For the EduRevolution benefit matrix, the parser applies **bi-directional cell fill** (forward and backward fill) across merged markdown cells so that every chunk carries its complete header context (`Scheme`, `Tier`, `Min Stipend`, `Duration`, `Benefit`).
 
@@ -115,7 +124,7 @@ flowchart TB
     end
 
     subgraph AgenticEngine["Agentic Core (LangChain ReAct Loop)"]
-        LLM["Foundation Model (AWS Bedrock / Gemini)"]
+        LLM["Foundation Model (AWS Bedrock Converse)"]
         Persona["Dual-Layer Prompting: Static Persona + Dynamic Profile"]
         ConsultativeGuard["Consultative Cross-Examination Guard"]
     end
@@ -204,7 +213,7 @@ Here is an authentic transcript demonstrating how CourseCompass handles incomple
 | **Embeddings** | `BAAI/bge-small-en-v1.5` | 384-dimensional dense vectors with L2 normalization; fast CPU inference footprint with top-tier MTEB retrieval performance. |
 | **Reranker** | `BAAI/bge-reranker-base` | Cross-encoder architecture with full cross-attention over query-passage pairs; reorders candidate pools with high semantic precision. |
 | **Agent Framework** | LangChain 1.3, LangGraph | Robust ReAct agent loop supporting multi-tool orchestration, state reconstruction, and conversation memory. |
-| **LLM Inference** | AWS Bedrock Converse API | Enterprise-grade serverless model invocation using high-throughput foundation models (`openai.gpt-oss-120b-1:0`). |
+| **LLM Inference** | AWS Bedrock Converse API | High-throughput serverless foundation model invocation using `openai.gpt-oss-120b-1:0`. |
 | **Frontend Framework** | React 19, TypeScript, Vite 8 | Ultra-fast single-page application with modern React compiler optimizations and zero-friction build times. |
 | **Design System** | Tailwind CSS v4, `@base-ui/react` | Editorial styling system inspired by Anthropic (warm cream canvas `#faf9f5`, coral accent `#cc785c`, dark code surfaces `#181715`). |
 
@@ -297,7 +306,7 @@ CourseCompass/
 │   │   ├── add_fts.py               # FTS GIN index migration wrapper
 │   │   └── ingestion/
 │   │       ├── pipeline.py          # Ingestion orchestration & change detection
-│   │       ├── parsing/             # PyMuPDF structural text extractors
+│   │       ├── parsing/             # PyMuPDF4LLM extraction + RapidOCR (page-level auto-OCR for scanned PDFs)
 │   │       ├── cleaning/            # Text cleaning & IP boilerplate removal
 │   │       └── chunking/            # Document-aware chunkers (Syllabus, IP, Benefits)
 │   ├── alembic/                     # Database migrations (baseline, FTS, schema)
@@ -342,15 +351,15 @@ For in-depth technical investigations, explore the comprehensive guides in `docs
 
 ## ⚖️ Engineering Audit & Project Roadmap
 
-| Capability Area | Current Status | Notes / Future Exploration |
+| Capability Area | Current Status | Notes / Implementation Reality |
 | :--- | :--- | :--- |
-| **Core RAG Pipeline** | ✅ **Production Ready** | Document-aware chunking, hybrid scoring, and BGE reranker operational. |
-| **Consultative Advising** | ✅ **Production Ready** | Multi-turn cross-examination protocol actively handles ambiguous claims. |
-| **Relational Curriculum** | ✅ **Production Ready** | Terms 1–8, 250+ courses, and elective baskets seeded in PostgreSQL. |
-| **Authentication & Profile** | ✅ **Production Ready** | JWT authentication with student CGPA and term auto-injected into context. |
-| **Frontend Web App** | ✅ **Production Ready** | React 19 SPA with streaming message UI and collapsible citations. |
-| **Automated Test Suite** | 🚧 **In Development** | Unit and integration testing for retrieval recall and tool security filters. |
-| **Benchmarking Suite** | 🚧 **Planned** | Quantitative RAG evaluation using Ragas (Faithfulness, Answer Relevance). |
+| **Core RAG Pipeline** | ✅ **Fully Functional** | Document-aware structural chunking, hybrid vector-lexical scoring, and BGE cross-encoder operational over 36 dual-document courses. |
+| **Consultative Advising** | ✅ **Fully Functional** | Multi-turn cross-examination protocol actively handles ambiguous claims and clarifies missing parameters. |
+| **Relational Curriculum** | ✅ **Seeded & Operational** | Terms 1–8, 250 courses, and elective baskets seeded and queryable in PostgreSQL via read-only SQL sandbox. |
+| **Authentication & Profile** | ✅ **Fully Functional** | JWT authentication with student CGPA, term, and program auto-injected into agent context. |
+| **Frontend Web App** | ✅ **Working Prototype** | React 19 SPA with full markdown rendering, auto-scrolling message history, and collapsible source citations (REST/JSON API). |
+| **Automated Test Suite** | 🚧 **In Development** | Retrieval recall unit tests and SQL sandbox security verification in progress. |
+| **Benchmarking Suite** | 🚧 **Planned** | Quantitative RAG evaluation using Ragas (Faithfulness, Answer Relevance) planned for benchmark validation. |
 
 ---
 
